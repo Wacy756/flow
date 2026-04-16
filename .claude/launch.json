@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Flutter (macOS)",
+      "runtimeExecutable": "/opt/homebrew/bin/flutter",
+      "runtimeArgs": ["run", "-d", "macos"],
+      "port": 8081,
+      "autoPort": true
+    },
+    {
+      "name": "Flutter (iOS Simulator)",
+      "runtimeExecutable": "/opt/homebrew/bin/flutter",
+      "runtimeArgs": ["run", "-d", "ios"],
+      "port": 8082,
+      "autoPort": true
+    },
+    {
+      "name": "Flutter (Android)",
+      "runtimeExecutable": "/opt/homebrew/bin/flutter",
+      "runtimeArgs": ["run", "-d", "android"],
+      "port": 8083,
+      "autoPort": true
+    }
+  ]
+}

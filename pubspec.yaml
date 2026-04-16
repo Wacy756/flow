@@ -1,0 +1,65 @@
+name: flow_app
+description: "Flow - Property management that flows."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^14.6.3
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Supabase
+  supabase_flutter: ^2.9.1
+
+  # Environment variables
+  flutter_dotenv: ^5.2.1
+
+  # UI
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+
+  # HTTP client (address lookup etc.)
+  http: ^1.6.0
+
+  # File picking (compliance doc uploads — Phase 8)
+  file_picker: ^8.1.7
+
+  # URL launching (open docs in browser)
+  url_launcher: ^6.3.2
+
+  # Map + location (Phase 6)
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  geolocator: ^12.0.0
+
+  # Push notifications
+  firebase_core: ^3.13.0
+  firebase_messaging: ^15.2.5
+  flutter_local_notifications: ^18.0.1
+
+  # Local storage (settings / push prefs)
+  shared_preferences: ^2.3.4
+
+  # Utilities
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
