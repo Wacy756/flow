@@ -237,7 +237,7 @@ final endedTenanciesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef EndedTenanciesRef = AutoDisposeFutureProviderRef<List<Tenancy>>;
-String _$tenantTenanciesHash() => r'0fa44d846b09584527ab8d20657336906d1c47db';
+String _$tenantTenanciesHash() => r'80e0134e6382f46074d0182d1a047e03bf792b1b';
 
 /// See also [tenantTenancies].
 @ProviderFor(tenantTenancies)
@@ -1270,7 +1270,7 @@ final incidentActionsProvider =
     );
 
 typedef _$IncidentActions = AutoDisposeNotifier<AsyncValue<void>>;
-String _$addTenancyHash() => r'9a72c9379fb0860647d33b283fb6d9f1dcfcc489';
+String _$addTenancyHash() => r'51fa991f94700cab55cf8c4b2ab6382a84f2a4a9';
 
 /// See also [AddTenancy].
 @ProviderFor(AddTenancy)

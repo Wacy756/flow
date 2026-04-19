@@ -334,6 +334,12 @@ class AddTenancy extends _$AddTenancy {
       // Unregistered emails — still send invitation email, skip tenancy creation
       final unregisteredEmails = <String>[];
 
+      // If no emails provided, skip tenant validation entirely —
+      // the property will be created with no tenancy rows attached.
+      if (tenantEmails.isEmpty) {
+        // Phase 2 (property creation only) runs further below — fall through.
+      }
+
       // Phase 1: validate all tenant emails and check for duplicates
       for (final email in tenantEmails) {
         final profile = await supabase
@@ -381,7 +387,11 @@ class AddTenancy extends _$AddTenancy {
         validTenants.add(profile);
       }
 
-      if (validTenants.isEmpty && unregisteredEmails.isEmpty) {
+      // Only block if the caller supplied emails but ALL of them failed validation.
+      // If no emails were supplied at all we fall through and create property-only.
+      if (tenantEmails.isNotEmpty &&
+          validTenants.isEmpty &&
+          unregisteredEmails.isEmpty) {
         state = AsyncError(errors.join('\n'), StackTrace.current);
         return false;
       }
@@ -422,7 +432,8 @@ class AddTenancy extends _$AddTenancy {
         }
       }
 
-      if (successCount > 0) {
+      // Refresh dashboard whenever the property was created, even with no tenants.
+      if (successCount > 0 || tenantEmails.isEmpty) {
         ref.invalidate(landlordTenanciesProvider);
       }
 
@@ -451,7 +462,9 @@ class AddTenancy extends _$AddTenancy {
 
       if (errors.isNotEmpty) {
         state = AsyncError(errors.join('\n'), StackTrace.current);
-        return successCount > 0 || unregisteredEmails.isNotEmpty;
+        return successCount > 0 ||
+            unregisteredEmails.isNotEmpty ||
+            tenantEmails.isEmpty;
       }
 
       state = const AsyncData(null);

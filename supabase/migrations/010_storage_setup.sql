@@ -18,6 +18,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Storage RLS — landlords can upload docs for their properties
+DROP POLICY IF EXISTS "landlords_upload_compliance_docs" ON storage.objects;
 CREATE POLICY "landlords_upload_compliance_docs"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -29,6 +30,7 @@ CREATE POLICY "landlords_upload_compliance_docs"
   );
 
 -- 3. Storage RLS — landlords + tenants can view / download
+DROP POLICY IF EXISTS "landlords_tenants_view_compliance_docs" ON storage.objects;
 CREATE POLICY "landlords_tenants_view_compliance_docs"
   ON storage.objects FOR SELECT
   USING (
@@ -46,6 +48,7 @@ CREATE POLICY "landlords_tenants_view_compliance_docs"
   );
 
 -- 4. Storage RLS — landlords can delete / replace their docs
+DROP POLICY IF EXISTS "landlords_delete_compliance_docs" ON storage.objects;
 CREATE POLICY "landlords_delete_compliance_docs"
   ON storage.objects FOR DELETE
   USING (

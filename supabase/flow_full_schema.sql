@@ -1,7 +1,9 @@
 -- ============================================================
 -- Flow App — Complete Database Schema
--- Paste this into Supabase SQL Editor on a fresh project.
--- This is the single source of truth — covers everything.
+-- Safe to run on ANY Supabase project state — fresh or existing.
+-- Uses CREATE TABLE IF NOT EXISTS, CREATE OR REPLACE FUNCTION,
+-- and DROP POLICY IF EXISTS throughout, so nothing breaks if
+-- tables or policies already exist.
 -- ============================================================
 
 -- ============================================================
@@ -368,20 +370,25 @@ ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- RLS POLICIES
+-- Every policy is preceded by DROP ... IF EXISTS so this script
+-- is safe to re-run on a database that already has some policies.
 -- ============================================================
 
 -- PROFILES
+DROP POLICY IF EXISTS "profiles_select_all" ON public.profiles;
 CREATE POLICY "profiles_select_all" ON public.profiles
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
 CREATE POLICY "profiles_insert_own" ON public.profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 CREATE POLICY "profiles_update_own" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
 -- PROPERTIES
--- Tightened contractor access: must be explicitly assigned to an incident (not just any open one)
+DROP POLICY IF EXISTS "properties_select" ON public.properties;
 CREATE POLICY "properties_select" ON public.properties FOR SELECT USING (
   landlord_id = auth.uid()
   OR id IN (
@@ -395,35 +402,40 @@ CREATE POLICY "properties_select" ON public.properties FOR SELECT USING (
   )
 );
 
+DROP POLICY IF EXISTS "properties_insert" ON public.properties;
 CREATE POLICY "properties_insert" ON public.properties
   FOR INSERT WITH CHECK (landlord_id = auth.uid());
 
+DROP POLICY IF EXISTS "properties_update" ON public.properties;
 CREATE POLICY "properties_update" ON public.properties
   FOR UPDATE USING (landlord_id = auth.uid());
 
+DROP POLICY IF EXISTS "properties_delete" ON public.properties;
 CREATE POLICY "properties_delete" ON public.properties
   FOR DELETE USING (landlord_id = auth.uid());
 
 -- TENANCIES
--- SELECT: landlord sees all their tenancies; tenant sees their own; also allow reads
--- for rows where tenant_id is null but invited_email matches current user's email
--- (needed so the tenant can see pending invitations before auto-link)
+DROP POLICY IF EXISTS "tenancies_select" ON public.tenancies;
 CREATE POLICY "tenancies_select" ON public.tenancies
   FOR SELECT USING (
     auth.uid() = landlord_id
     OR auth.uid() = tenant_id
   );
 
+DROP POLICY IF EXISTS "tenancies_insert" ON public.tenancies;
 CREATE POLICY "tenancies_insert" ON public.tenancies
   FOR INSERT WITH CHECK (auth.uid() = landlord_id);
 
+DROP POLICY IF EXISTS "tenancies_update" ON public.tenancies;
 CREATE POLICY "tenancies_update" ON public.tenancies
   FOR UPDATE USING (auth.uid() = landlord_id OR auth.uid() = tenant_id);
 
+DROP POLICY IF EXISTS "tenancies_delete" ON public.tenancies;
 CREATE POLICY "tenancies_delete" ON public.tenancies
   FOR DELETE USING (auth.uid() = landlord_id);
 
 -- INCIDENTS
+DROP POLICY IF EXISTS "incidents_select" ON public.incidents;
 CREATE POLICY "incidents_select" ON public.incidents FOR SELECT USING (
   auth.uid() = tenant_id
   OR auth.uid() = contractor_id
@@ -434,9 +446,11 @@ CREATE POLICY "incidents_select" ON public.incidents FOR SELECT USING (
   )
 );
 
+DROP POLICY IF EXISTS "incidents_insert" ON public.incidents;
 CREATE POLICY "incidents_insert" ON public.incidents
   FOR INSERT WITH CHECK (auth.uid() = tenant_id);
 
+DROP POLICY IF EXISTS "incidents_update" ON public.incidents;
 CREATE POLICY "incidents_update" ON public.incidents FOR UPDATE USING (
   auth.uid() = tenant_id
   OR auth.uid() = contractor_id
@@ -447,16 +461,20 @@ CREATE POLICY "incidents_update" ON public.incidents FOR UPDATE USING (
 );
 
 -- CONTRACTOR DETAILS
+DROP POLICY IF EXISTS "contractor_details_select" ON public.contractor_details;
 CREATE POLICY "contractor_details_select" ON public.contractor_details
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "contractor_details_insert" ON public.contractor_details;
 CREATE POLICY "contractor_details_insert" ON public.contractor_details
   FOR INSERT WITH CHECK (auth.uid() = contractor_id);
 
+DROP POLICY IF EXISTS "contractor_details_update" ON public.contractor_details;
 CREATE POLICY "contractor_details_update" ON public.contractor_details
   FOR UPDATE USING (auth.uid() = contractor_id);
 
 -- COMPLIANCE DOCS
+DROP POLICY IF EXISTS "compliance_docs_select" ON public.compliance_docs;
 CREATE POLICY "compliance_docs_select" ON public.compliance_docs FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.properties p
@@ -466,6 +484,7 @@ CREATE POLICY "compliance_docs_select" ON public.compliance_docs FOR SELECT USIN
   )
 );
 
+DROP POLICY IF EXISTS "compliance_docs_insert" ON public.compliance_docs;
 CREATE POLICY "compliance_docs_insert" ON public.compliance_docs FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.properties p
@@ -476,36 +495,43 @@ CREATE POLICY "compliance_docs_insert" ON public.compliance_docs FOR INSERT WITH
 );
 
 -- PROPERTY LISTINGS
+DROP POLICY IF EXISTS "listings_landlord_all" ON public.property_listings;
 CREATE POLICY "listings_landlord_all" ON public.property_listings
   FOR ALL
   USING (landlord_id = auth.uid())
   WITH CHECK (landlord_id = auth.uid());
 
--- Anyone can read active listings (needed for the public apply page)
+DROP POLICY IF EXISTS "listings_public_select" ON public.property_listings;
 CREATE POLICY "listings_public_select" ON public.property_listings
   FOR SELECT USING (is_active = true);
 
 -- APPLICATIONS
+DROP POLICY IF EXISTS "applications_applicant_insert" ON public.applications;
 CREATE POLICY "applications_applicant_insert" ON public.applications
   FOR INSERT WITH CHECK (applicant_id = auth.uid());
 
+DROP POLICY IF EXISTS "applications_applicant_select" ON public.applications;
 CREATE POLICY "applications_applicant_select" ON public.applications
   FOR SELECT USING (applicant_id = auth.uid());
 
+DROP POLICY IF EXISTS "applications_landlord_select" ON public.applications;
 CREATE POLICY "applications_landlord_select" ON public.applications
   FOR SELECT USING (landlord_id = auth.uid());
 
+DROP POLICY IF EXISTS "applications_landlord_update" ON public.applications;
 CREATE POLICY "applications_landlord_update" ON public.applications
   FOR UPDATE
   USING (landlord_id = auth.uid())
   WITH CHECK (landlord_id = auth.uid());
 
 -- RENT PAYMENTS
+DROP POLICY IF EXISTS "rent_payments_landlord_all" ON public.rent_payments;
 CREATE POLICY "rent_payments_landlord_all" ON public.rent_payments
   FOR ALL
   USING (landlord_id = auth.uid())
   WITH CHECK (landlord_id = auth.uid());
 
+DROP POLICY IF EXISTS "rent_payments_tenant_select" ON public.rent_payments;
 CREATE POLICY "rent_payments_tenant_select" ON public.rent_payments
   FOR SELECT USING (
     EXISTS (
@@ -516,6 +542,7 @@ CREATE POLICY "rent_payments_tenant_select" ON public.rent_payments
   );
 
 -- INCIDENT COMMENTS
+DROP POLICY IF EXISTS "incident_comments_select" ON public.incident_comments;
 CREATE POLICY "incident_comments_select" ON public.incident_comments
   FOR SELECT USING (
     EXISTS (
@@ -531,6 +558,7 @@ CREATE POLICY "incident_comments_select" ON public.incident_comments
     )
   );
 
+DROP POLICY IF EXISTS "incident_comments_insert" ON public.incident_comments;
 CREATE POLICY "incident_comments_insert" ON public.incident_comments
   FOR INSERT WITH CHECK (
     author_id = auth.uid()
@@ -549,44 +577,56 @@ CREATE POLICY "incident_comments_insert" ON public.incident_comments
   );
 
 -- NOTIFICATIONS
+DROP POLICY IF EXISTS "notifications_user_select" ON public.notifications;
 CREATE POLICY "notifications_user_select" ON public.notifications
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "notifications_user_update" ON public.notifications;
 CREATE POLICY "notifications_user_update" ON public.notifications
   FOR UPDATE
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
 -- JOB RATINGS
+DROP POLICY IF EXISTS "tenants_insert_ratings" ON public.job_ratings;
 CREATE POLICY "tenants_insert_ratings" ON public.job_ratings
   FOR INSERT WITH CHECK (tenant_id = auth.uid());
 
+DROP POLICY IF EXISTS "authenticated_read_ratings" ON public.job_ratings;
 CREATE POLICY "authenticated_read_ratings" ON public.job_ratings
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- FCM TOKENS — full CRUD for own tokens (DELETE used on sign-out)
+-- FCM TOKENS
+DROP POLICY IF EXISTS "fcm_tokens_select" ON public.fcm_tokens;
 CREATE POLICY "fcm_tokens_select" ON public.fcm_tokens
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "fcm_tokens_insert" ON public.fcm_tokens;
 CREATE POLICY "fcm_tokens_insert" ON public.fcm_tokens
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "fcm_tokens_update" ON public.fcm_tokens;
 CREATE POLICY "fcm_tokens_update" ON public.fcm_tokens
   FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "fcm_tokens_delete" ON public.fcm_tokens;
 CREATE POLICY "fcm_tokens_delete" ON public.fcm_tokens
   FOR DELETE USING (user_id = auth.uid());
 
--- NOTIFICATION PREFERENCES — full CRUD (DELETE on account deletion)
+-- NOTIFICATION PREFERENCES
+DROP POLICY IF EXISTS "notif_prefs_select" ON public.notification_preferences;
 CREATE POLICY "notif_prefs_select" ON public.notification_preferences
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "notif_prefs_insert" ON public.notification_preferences;
 CREATE POLICY "notif_prefs_insert" ON public.notification_preferences
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "notif_prefs_update" ON public.notification_preferences;
 CREATE POLICY "notif_prefs_update" ON public.notification_preferences
   FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "notif_prefs_delete" ON public.notification_preferences;
 CREATE POLICY "notif_prefs_delete" ON public.notification_preferences
   FOR DELETE USING (user_id = auth.uid());
 
@@ -936,6 +976,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Landlords can upload docs for their own properties
+DROP POLICY IF EXISTS "landlords_upload_compliance_docs" ON storage.objects;
 CREATE POLICY "landlords_upload_compliance_docs"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -947,6 +988,7 @@ CREATE POLICY "landlords_upload_compliance_docs"
   );
 
 -- Landlords + tenants of that property can view / download
+DROP POLICY IF EXISTS "landlords_tenants_view_compliance_docs" ON storage.objects;
 CREATE POLICY "landlords_tenants_view_compliance_docs"
   ON storage.objects FOR SELECT
   USING (
@@ -964,6 +1006,7 @@ CREATE POLICY "landlords_tenants_view_compliance_docs"
   );
 
 -- Landlords can delete / replace docs
+DROP POLICY IF EXISTS "landlords_delete_compliance_docs" ON storage.objects;
 CREATE POLICY "landlords_delete_compliance_docs"
   ON storage.objects FOR DELETE
   USING (
