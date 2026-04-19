@@ -41,10 +41,8 @@ dependencies:
   latlong2: ^0.9.0
   geolocator: ^12.0.0
 
-  # Push notifications
-  firebase_core: ^3.13.0
-  firebase_messaging: ^15.2.5
-  flutter_local_notifications: ^18.0.1
+  # Push notifications — packages removed until Firebase project is configured.
+  # See lib/core/notifications/push_service.dart for re-enable instructions.
 
   # Local storage (settings / push prefs)
   shared_preferences: ^2.3.4
