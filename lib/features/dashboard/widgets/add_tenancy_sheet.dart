@@ -179,10 +179,6 @@ class _AddTenancySheetState extends ConsumerState<_AddTenancySheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_emails.isEmpty && _emailCtrl.text.trim().isEmpty) {
-      setState(() => _submitError = 'Add at least one tenant email.');
-      return;
-    }
 
     final allEmails = [..._emails];
     final typed = _emailCtrl.text.trim().toLowerCase();
@@ -231,9 +227,11 @@ class _AddTenancySheetState extends ConsumerState<_AddTenancySheet> {
       final partialMsg = hasPartialError
           ? '\n\nNote: some emails were not on Flow yet — they\'ve been sent a sign-up invitation.'
           : '';
+      final successMsg = allEmails.isEmpty
+          ? 'Property created!'
+          : 'Tenancy created!$partialMsg';
       setState(() {
-        _submitSuccess =
-            'Tenancy created!$partialMsg';
+        _submitSuccess = successMsg;
         _submitting = false;
       });
       Future.delayed(const Duration(seconds: 3), () {
@@ -460,7 +458,12 @@ class _AddTenancySheetState extends ConsumerState<_AddTenancySheet> {
                                     Colors.white),
                               ),
                             )
-                          : const Text('Send Invitations'),
+                          : Text(
+                              (_emails.isEmpty &&
+                                      _emailCtrl.text.trim().isEmpty)
+                                  ? 'Create Property'
+                                  : 'Send Invitations',
+                            ),
                     ),
                     const SizedBox(height: 24),
                   ],
