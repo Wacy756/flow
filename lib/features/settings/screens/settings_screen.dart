@@ -94,21 +94,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       hintStyle: const TextStyle(
                           color: AppTheme.textMuted, fontSize: 14),
                       filled: true,
-                      fillColor: AppTheme.bgPage,
+                      fillColor: AppTheme.bg,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide:
                             const BorderSide(color: AppTheme.border),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide:
                             const BorderSide(color: AppTheme.border),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
                             color: AppTheme.green, width: 1.5),
                       ),
@@ -155,8 +155,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppTheme.bgPage,
-                      borderRadius: BorderRadius.circular(10),
+                      color: AppTheme.bg,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                           color: AppTheme.border, width: 1),
                     ),
@@ -237,14 +237,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Display name updated'),
-          backgroundColor: AppTheme.darkBg,
+          backgroundColor: AppTheme.bgSurface,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to update name. Try again.'),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFF2D1515),
         ),
       );
     }
@@ -261,13 +261,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Delete account?',
           style: TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 16,
-              fontWeight: FontWeight.w800),
+              fontWeight: FontWeight.w700),
         ),
         content: const Text(
           'This will permanently delete your account and all associated data. This action cannot be undone.',

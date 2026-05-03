@@ -723,9 +723,9 @@ class _StatusPill extends StatelessWidget {
 
   Color get _bg => switch (status) {
         'active' => AppTheme.greenBg,
-        'notice_given' => const Color(0xFFFFFBEB),
-        'ended' => AppTheme.bgPage,
-        _ => const Color(0xFFFFF3E0),
+        'notice_given' => const Color(0xFF2D2306),
+        'ended' => AppTheme.bgSurface,
+        _ => const Color(0xFF2D1E0F),
       };
 
   Color get _fg => switch (status) {

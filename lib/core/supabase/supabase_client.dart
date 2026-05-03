@@ -10,4 +10,5 @@ Future<void> initSupabase() async {
 }
 
 /// Convenient global accessor — mirrors the `createClient()` pattern from the web app.
+
 SupabaseClient get supabase => Supabase.instance.client;

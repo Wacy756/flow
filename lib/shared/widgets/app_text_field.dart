@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Styled text field matching the web app's green-bordered inputs.
+/// Styled text field matching the app's dark-themed inputs.
 class AppTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -35,9 +35,11 @@ class AppTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppTheme.textPrimary,
+          style: const TextStyle(
+            fontSize: 12,
             fontWeight: FontWeight.w500,
+            color: AppTheme.textMuted,
+            letterSpacing: 0.2,
           ),
         ),
         const SizedBox(height: 6),
@@ -48,12 +50,13 @@ class AppTextField extends StatelessWidget {
           textInputAction: textInputAction,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          style: const TextStyle(
             color: AppTheme.textPrimary,
+            fontSize: 15,
           ),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(prefixIcon, size: 20, color: AppTheme.textMuted),
+            prefixIcon: Icon(prefixIcon, size: 18, color: AppTheme.textMuted),
             suffixIcon: suffix,
           ),
         ),

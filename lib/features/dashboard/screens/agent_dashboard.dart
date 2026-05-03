@@ -486,10 +486,10 @@ class _ComplianceBanner extends StatelessWidget {
         if (!summary.hasAlerts) return const SizedBox.shrink();
 
         final hasExpired = summary.expired > 0;
-        final color = hasExpired ? Colors.red : const Color(0xFFE65100);
+        final color = hasExpired ? const Color(0xFFFF6B6B) : const Color(0xFFFB923C);
         final bg = hasExpired
-            ? const Color(0xFFFFEBEE)
-            : const Color(0xFFFFF3E0);
+            ? const Color(0xFF2D1515)
+            : const Color(0xFF2D1E0F);
 
         String message;
         if (summary.expired > 0 && summary.expiringSoon > 0) {
@@ -612,7 +612,7 @@ class _PreviousTenanciesSectionState
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
+                            color: AppTheme.card2,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

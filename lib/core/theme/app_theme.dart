@@ -2,38 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // ── Background ─────────────────────────────────────────────────────────────
-  static const Color bgPage    = Color(0xFFF5F2EE);
-  static const Color bgSurface = Color(0xFFFDFAF7);
+  // ── Page / surface backgrounds ─────────────────────────────────────────────
+  static const Color bg        = Color(0xFF0A0A0C);
+  static const Color bgPage    = Color(0xFF0A0A0C);   // backward-compat alias
+  static const Color bgSurface = Color(0xFF131316);   // cards / sheet surfaces
+  static const Color card2     = Color(0xFF1C1C20);   // nested surfaces
 
   // ── Borders ────────────────────────────────────────────────────────────────
-  static const Color border    = Color(0xFFE0DAD2);
+  static const Color border     = Color(0x12FFFFFF);  // rgba(255,255,255,0.07)
+  static const Color borderLight = Color(0x12FFFFFF); // alias
 
   // ── Text ───────────────────────────────────────────────────────────────────
-  static const Color textPrimary   = Color(0xFF1C1C1A);
-  static const Color textSecondary = Color(0xFF7A6E62);
-  static const Color textMuted     = Color(0xFFA89E93);
+  static const Color textPrimary   = Color(0xFFF2F2F3);
+  static const Color textSecondary = Color(0xFF9A9AA4);
+  static const Color textMuted     = Color(0xFF6B6B72);
 
   // ── Green — primary brand accent ───────────────────────────────────────────
-  static const Color green      = Color(0xFF2D6A2D);
-  static const Color greenLight = Color(0xFF6ECF6E);
-  static const Color greenBg    = Color(0xFFD6EDD6);
+  static const Color green      = Color(0xFF4ADE80);
+  static const Color greenLight = Color(0xFF4ADE80);
+  static const Color greenBg    = Color(0x264ADE80); // rgba(74,222,128,0.15)
 
-  // ── Dark sections ──────────────────────────────────────────────────────────
-  static const Color darkBg     = Color(0xFF141E14);
-  static const Color darkBorder = Color(0xFF1F2E1F);
-  static const Color darkMuted  = Color(0xFF4A5E4A);
-  static const Color darkSubtle = Color(0xFF3D4E3D);
+  // ── Dark section aliases (kept for backward compat with SnackBar refs) ─────
+  static const Color darkBg     = Color(0xFF0A0A0C);
+  static const Color darkBorder = Color(0x12FFFFFF);
+  static const Color darkMuted  = Color(0xFF6B6B72);
+  static const Color darkSubtle = Color(0x33FFFFFF);
 
-  // ── Role colours — card backgrounds ───────────────────────────────────────
-  static const Color landlordBg    = Color(0xFF1E3A5F);
-  static const Color landlordGlow  = Color(0xFF60A5FA);
-  static const Color tenantBg      = Color(0xFF1A3D1A);
-  static const Color tenantGlow    = Color(0xFF6ECF6E);
-  static const Color contractorBg  = Color(0xFF7C2D00);
+  // ── Role colours ───────────────────────────────────────────────────────────
+  // Backgrounds
+  static const Color landlordBg    = Color(0xFF0F2D1F);
+  static const Color tenantBg      = Color(0xFF1A1A0A);
+  static const Color contractorBg  = Color(0xFF1F0F0A);
+  static const Color agentBg       = Color(0xFF0D0F2A);
+
+  // Accent / glow colours
+  static const Color landlordGlow   = Color(0xFF4ADE80);
+  static const Color tenantGlow     = Color(0xFFEAB308);
   static const Color contractorGlow = Color(0xFFFB923C);
-  static const Color agentBg       = Color(0xFF1C1C1A);
-  static const Color agentGlow     = Color(0xFFA78BFA);
+  static const Color agentGlow      = Color(0xFF818CF8);
 
   // ── Backward-compat aliases ────────────────────────────────────────────────
   static const Color primary        = green;
@@ -42,59 +48,60 @@ class AppTheme {
   static const Color primarySurface = greenBg;
   static const Color surface        = bgSurface;
   static const Color background     = bgPage;
-  static const Color borderLight    = border;
   static const Color landlordColor  = landlordGlow;
   static const Color tenantColor    = tenantGlow;
   static const Color contractorColor = contractorGlow;
   static const Color agentColor     = agentGlow;
 
   // ── Theme ──────────────────────────────────────────────────────────────────
-  static ThemeData get light {
+  static ThemeData get dark {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: green,
-        primary: green,
-        secondary: greenLight,
-        surface: bgSurface,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: textPrimary,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary:    green,
+        secondary:  greenLight,
+        surface:    bgSurface,
+        onPrimary:  bgPage,
+        onSecondary: bgPage,
+        onSurface:  textPrimary,
+        outline:    border,
       ),
       scaffoldBackgroundColor: bgPage,
-      textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: GoogleFonts.inter(
-          fontSize: 32, fontWeight: FontWeight.w800, color: textPrimary,
+      textTheme: GoogleFonts.dmSansTextTheme().copyWith(
+        displayLarge: GoogleFonts.dmSans(
+          fontSize: 32, fontWeight: FontWeight.w700, color: textPrimary,
+          letterSpacing: -0.8,
         ),
-        displayMedium: GoogleFonts.inter(
-          fontSize: 24, fontWeight: FontWeight.w800, color: textPrimary,
+        displayMedium: GoogleFonts.dmSans(
+          fontSize: 24, fontWeight: FontWeight.w700, color: textPrimary,
           letterSpacing: -0.5,
         ),
-        displaySmall: GoogleFonts.inter(
-          fontSize: 20, fontWeight: FontWeight.w800, color: textPrimary,
+        displaySmall: GoogleFonts.dmSans(
+          fontSize: 20, fontWeight: FontWeight.w700, color: textPrimary,
           letterSpacing: -0.4,
         ),
-        headlineMedium: GoogleFonts.inter(
-          fontSize: 18, fontWeight: FontWeight.w800, color: textPrimary,
+        headlineMedium: GoogleFonts.dmSans(
+          fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary,
           letterSpacing: -0.4,
         ),
-        titleLarge: GoogleFonts.inter(
-          fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary,
+        titleLarge: GoogleFonts.dmSans(
+          fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary,
           letterSpacing: -0.3,
         ),
-        titleMedium: GoogleFonts.inter(
+        titleMedium: GoogleFonts.dmSans(
           fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary,
         ),
-        bodyLarge: GoogleFonts.inter(
+        bodyLarge: GoogleFonts.dmSans(
           fontSize: 16, fontWeight: FontWeight.w400, color: textPrimary,
         ),
-        bodyMedium: GoogleFonts.inter(
+        bodyMedium: GoogleFonts.dmSans(
           fontSize: 14, fontWeight: FontWeight.w400, color: textPrimary,
         ),
-        bodySmall: GoogleFonts.inter(
+        bodySmall: GoogleFonts.dmSans(
           fontSize: 12, fontWeight: FontWeight.w400, color: textSecondary,
         ),
-        labelLarge: GoogleFonts.inter(
+        labelLarge: GoogleFonts.dmSans(
           fontSize: 14, fontWeight: FontWeight.w500, color: textPrimary,
         ),
       ),
@@ -103,34 +110,51 @@ class AppTheme {
         fillColor: bgSurface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: border, width: 0.5),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: border, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: border, width: 0.5),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: green, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Colors.red),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
-        hintStyle: GoogleFonts.inter(color: textMuted, fontSize: 14),
+        hintStyle: GoogleFonts.dmSans(color: textMuted, fontSize: 14),
+        labelStyle: GoogleFonts.dmSans(color: textMuted, fontSize: 14),
+        prefixIconColor: textMuted,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: green,
-          foregroundColor: Colors.white,
+          foregroundColor: bgPage,
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(100)),
+          textStyle: GoogleFonts.dmSans(
+              fontSize: 15, fontWeight: FontWeight.w500,
+              letterSpacing: -0.3),
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: textPrimary,
+          side: const BorderSide(color: border, width: 1),
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(100)),
+          textStyle: GoogleFonts.dmSans(
+              fontSize: 15, fontWeight: FontWeight.w500),
           elevation: 0,
         ),
       ),
@@ -139,7 +163,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: border, width: 0.5),
+          side: const BorderSide(color: border, width: 1),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -147,16 +171,50 @@ class AppTheme {
         foregroundColor: textPrimary,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
-          color: textPrimary,
-          letterSpacing: -0.3,
+        titleTextStyle: GoogleFonts.dmSans(
+          fontSize: 16, fontWeight: FontWeight.w700,
+          color: textPrimary, letterSpacing: -0.3,
+        ),
+        iconTheme: const IconThemeData(color: textSecondary),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: bgSurface,
+        modalBackgroundColor: bgSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: border, thickness: 0.5),
+      dialogTheme: DialogThemeData(
+        backgroundColor: bgSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: GoogleFonts.dmSans(
+          fontSize: 17, fontWeight: FontWeight.w700,
+          color: textPrimary, letterSpacing: -0.3,
+        ),
+        contentTextStyle: GoogleFonts.dmSans(
+          fontSize: 13, color: textSecondary,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? bgPage : textMuted),
+        trackColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected) ? green : border),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: bgSurface,
+        contentTextStyle: GoogleFonts.dmSans(color: textPrimary, fontSize: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        behavior: SnackBarBehavior.floating,
+      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 1),
+      iconTheme: const IconThemeData(color: textSecondary),
     );
   }
+
+  // Keep 'light' getter pointing to the same theme for zero-change compat
+  // (main.dart references AppTheme.light — updated separately)
+  static ThemeData get light => dark;
 
   // ── Role helpers ───────────────────────────────────────────────────────────
 
@@ -167,7 +225,7 @@ class AppTheme {
       case 'tenant':     return tenantBg;
       case 'contractor': return contractorBg;
       case 'agent':      return agentBg;
-      default:           return tenantBg;
+      default:           return bgSurface;
     }
   }
 

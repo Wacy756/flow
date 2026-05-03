@@ -14,6 +14,33 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/flow_logo.dart';
 import '../providers/auth_notifier.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Role accent colours (mirrors landing page)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const _roleAccent = <String, Color>{
+  'landlord':   Color(0xFF4ADE80),
+  'tenant':     Color(0xFFEAB308),
+  'contractor': Color(0xFFFB923C),
+  'agent':      Color(0xFF818CF8),
+};
+
+const _roleBg = <String, Color>{
+  'landlord':   Color(0xFF0F2D1F),
+  'tenant':     Color(0xFF1A1A0A),
+  'contractor': Color(0xFF1F0F0A),
+  'agent':      Color(0xFF0D0F2A),
+};
+
+const _roleBorder = <String, Color>{
+  'landlord':   Color(0x334ADE80),
+  'tenant':     Color(0x33EAB308),
+  'contractor': Color(0x33FB923C),
+  'agent':      Color(0x33818CF8),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AuthScreen extends ConsumerStatefulWidget {
   final String? initialRole;
   final String initialMode;
@@ -33,27 +60,24 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen>
     with SingleTickerProviderStateMixin {
   late String _mode; // 'signup' | 'signin'
-  bool _useMagicLink = false; // toggle within sign-in mode
+  bool _useMagicLink = false;
   String? _selectedRole;
   bool _showPassword = false;
   bool _oauthLoading = false;
 
-  final _formKey      = GlobalKey<FormState>();
-  final _emailCtrl    = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _nameCtrl     = TextEditingController();
+  final _formKey        = GlobalKey<FormState>();
+  final _emailCtrl      = TextEditingController();
+  final _passwordCtrl   = TextEditingController();
+  final _nameCtrl       = TextEditingController();
   final _magicEmailCtrl = TextEditingController();
 
   late final AnimationController _expandCtrl;
   late final Animation<double>   _expandAnim;
 
-  // OAuth role-picker state  ──────────────────────────────────────────────
-  // Shown after a successful OAuth sign-in when the user has no role yet.
   bool    _showOAuthRolePicker = false;
   String? _oauthSelectedRole;
   final   _oauthNameCtrl = TextEditingController();
 
-  // Auth-state subscription (listens for OAuth sign-in completion)
   StreamSubscription<dynamic>? _authStateSub;
 
   @override
@@ -72,14 +96,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       curve: Curves.easeInOut,
     );
 
-    // Listen for the OAuth deep-link return so we can show the role picker
-    // for new users, or let the router redirect handle returning users.
-    _authStateSub = supabase.auth.onAuthStateChange.listen(_onAuthStateChange);
+    _authStateSub =
+        supabase.auth.onAuthStateChange.listen(_onAuthStateChange);
   }
 
   void _onAuthStateChange(dynamic data) {
     if (!mounted) return;
-    // Supabase fires AuthState(event, session) objects.
     final event   = data.event as AuthChangeEvent?;
     final session = data.session;
     if (event != AuthChangeEvent.signedIn || session == null) return;
@@ -88,21 +110,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final provider = user.appMetadata['provider'] as String?;
     final role     = user.userMetadata?['role'] as String?;
 
-    // Only intercept OAuth users who haven't set a role yet.
-    // Email/password users navigate via context.go() in _submit().
-    if (provider != null && provider != 'email' && (role == null || role.isEmpty)) {
-      // Pre-fill the name from whatever the OAuth provider gave us.
-      final oauthName = user.userMetadata?['name']        as String? ??
-                        user.userMetadata?['full_name']    as String? ?? '';
+    if (provider != null &&
+        provider != 'email' &&
+        (role == null || role.isEmpty)) {
+      final oauthName = user.userMetadata?['name']     as String? ??
+                        user.userMetadata?['full_name'] as String? ?? '';
       setState(() {
-        _oauthSelectedRole = null;
+        _oauthSelectedRole  = null;
         _oauthNameCtrl.text = oauthName;
         _showOAuthRolePicker = true;
-        _oauthLoading = false;
+        _oauthLoading        = false;
       });
     }
-    // Returning OAuth users (already have a role) are handled automatically
-    // by the router's refreshListenable → redirect to /dashboard.
   }
 
   @override
@@ -117,15 +136,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     super.dispose();
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Email / password submit
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── Mode ────────────────────────────────────────────────────────────────────
 
   void _switchMode(String mode) {
     if (_mode == mode) return;
     setState(() {
-      _mode = mode;
-      _useMagicLink = false; // reset magic-link toggle on mode switch
+      _mode         = mode;
+      _useMagicLink = false;
     });
     if (mode == 'signup') {
       _expandCtrl.forward();
@@ -134,7 +151,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
   }
 
-  // Magic Link send
+  // ── Magic Link ───────────────────────────────────────────────────────────────
+
   Future<void> _sendMagicLink() async {
     final email = _magicEmailCtrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
@@ -152,6 +170,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       ref.read(authNotifierProvider.notifier).reset();
     }
   }
+
+  // ── Email / password ─────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -196,9 +216,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // OAuth sign-in
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── OAuth ────────────────────────────────────────────────────────────────────
 
   Future<void> _signInWithOAuth(OAuthProvider provider) async {
     setState(() => _oauthLoading = true);
@@ -210,14 +228,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       _showSnack(authState.errorMessage ?? 'Sign-in failed.', isError: true);
       ref.read(authNotifierProvider.notifier).reset();
     }
-    // On success the notifier sets status to idle; we keep _oauthLoading true
-    // so the spinner shows while the browser is open.  _onAuthStateChange
-    // resets it when the deep-link returns.
   }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // OAuth role picker submit
-  // ──────────────────────────────────────────────────────────────────────────
 
   Future<void> _submitOAuthRole() async {
     if (_oauthSelectedRole == null) {
@@ -241,30 +252,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       _showSnack(authState.errorMessage ?? 'An error occurred.', isError: true);
       ref.read(authNotifierProvider.notifier).reset();
     } else {
-      // setOAuthRole called updateUser, which fires onAuthStateChange →
-      // the router's refreshListenable detects the new role in JWT and
-      // redirects to /dashboard automatically.
       ref.read(authNotifierProvider.notifier).reset();
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── Snack ────────────────────────────────────────────────────────────────────
 
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? AppTheme.darkBg : AppTheme.green,
+        content: Text(msg,
+            style: const TextStyle(color: AppTheme.textPrimary)),
+        backgroundColor: isError
+            ? const Color(0xFF2D1515)
+            : AppTheme.bgSurface,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         margin: const EdgeInsets.all(16),
       ),
     );
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Build
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -272,14 +281,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final isLoading = authState.status == AuthStatus.loading;
 
     return Scaffold(
-      backgroundColor: AppTheme.bgPage,
+      backgroundColor: AppTheme.bg,
       body: SafeArea(
         child: Stack(
           children: [
-            // ── Main auth form ─────────────────────────────────────────────
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 22, vertical: 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -290,47 +299,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         onTap: () => context.go('/'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                              horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
                             color: AppTheme.bgSurface,
-                            borderRadius: BorderRadius.circular(10),
-                            border:
-                                Border.all(color: AppTheme.border, width: 0.5),
+                            borderRadius: BorderRadius.circular(100),
+                            border: Border.all(color: AppTheme.border),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
+                            children: const [
                               Icon(Icons.arrow_back_ios_new_rounded,
-                                  size: 13, color: AppTheme.textMuted),
-                              const SizedBox(width: 4),
+                                  size: 12,
+                                  color: AppTheme.textMuted),
+                              SizedBox(width: 5),
                               Text('Back',
                                   style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textMuted)),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textMuted,
+                                  )),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
+
                     // Logo + wordmark
                     Column(
-                      children: [
-                        const FlowLogo(size: 40),
-                        const SizedBox(height: 10),
-                        const Text(
+                      children: const [
+                        FlowLogo(size: 42),
+                        SizedBox(height: 10),
+                        Text(
                           'Flow',
                           style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary,
-                            letterSpacing: -0.6,
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
                     // Headline
                     AnimatedSwitcher(
@@ -343,7 +354,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
                           letterSpacing: -0.5,
                         ),
@@ -372,7 +383,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     _ModeToggle(mode: _mode, onSwitch: _switchMode),
                     const SizedBox(height: 20),
 
-                    // ── Magic link sub-toggle (sign-in only) ─────────────
+                    // Magic link sub-toggle (sign-in only)
                     if (_mode == 'signin') ...[
                       _MagicLinkToggle(
                         useMagicLink: _useMagicLink,
@@ -381,7 +392,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       const SizedBox(height: 20),
                     ],
 
-                    // ── Magic link form ───────────────────────────────────
+                    // Magic link form
                     if (_mode == 'signin' && _useMagicLink) ...[
                       AppTextField(
                         controller: _magicEmailCtrl,
@@ -399,182 +410,159 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         child: ElevatedButton(
                           onPressed: isLoading ? null : _sendMagicLink,
                           child: isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor:
-                                        AlwaysStoppedAnimation(Colors.white),
-                                  ),
-                                )
+                              ? const _Spinner()
                               : const Text('Send Magic Link'),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         "We'll email you a sign-in link — no password needed.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 12, color: AppTheme.textMuted),
                       ),
                       const SizedBox(height: 20),
-                      // OAuth buttons still shown below
                     ],
 
-                    // ── Email / password form ────────────────────────────
+                    // Email / password form
                     if (!(_mode == 'signin' && _useMagicLink))
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Sign-up-only fields
-                          SizeTransition(
-                            sizeFactor: _expandAnim,
-                            axisAlignment: -1,
-                            child: FadeTransition(
-                              opacity: _expandAnim,
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: [
-                                  if (widget.initialRole == null) ...[
-                                    const Text(
-                                      'Select Role',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textPrimary,
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Sign-up-only fields
+                            SizeTransition(
+                              sizeFactor: _expandAnim,
+                              axisAlignment: -1,
+                              child: FadeTransition(
+                                opacity: _expandAnim,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (widget.initialRole == null) ...[
+                                      const Text(
+                                        'Select Role',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppTheme.textMuted,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _RoleGrid(
-                                      selected: _selectedRole,
-                                      onSelect: (r) =>
-                                          setState(() => _selectedRole = r),
+                                      const SizedBox(height: 8),
+                                      _RoleGrid(
+                                        selected: _selectedRole,
+                                        onSelect: (r) => setState(
+                                            () => _selectedRole = r),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+                                    AppTextField(
+                                      controller: _nameCtrl,
+                                      label: 'Full Name',
+                                      hint: 'John Doe',
+                                      prefixIcon: Icons.person_outline,
+                                      textInputAction: TextInputAction.next,
+                                      validator: (v) =>
+                                          _mode == 'signup' &&
+                                                  (v == null ||
+                                                      v.trim().isEmpty)
+                                              ? 'Full name is required'
+                                              : null,
                                     ),
                                     const SizedBox(height: 16),
                                   ],
-                                  AppTextField(
-                                    controller: _nameCtrl,
-                                    label: 'Full Name',
-                                    hint: 'John Doe',
-                                    prefixIcon: Icons.person_outline,
-                                    textInputAction: TextInputAction.next,
-                                    validator: (v) =>
-                                        _mode == 'signup' &&
-                                                (v == null ||
-                                                    v.trim().isEmpty)
-                                            ? 'Full name is required'
-                                            : null,
-                                  ),
-                                  const SizedBox(height: 16),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
 
-                          AppTextField(
-                            controller: _emailCtrl,
-                            label: 'Email',
-                            hint: 'you@example.com',
-                            prefixIcon: Icons.mail_outline,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Email is required';
-                              }
-                              if (!v.contains('@')) {
-                                return 'Enter a valid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
+                            AppTextField(
+                              controller: _emailCtrl,
+                              label: 'Email',
+                              hint: 'you@example.com',
+                              prefixIcon: Icons.mail_outline,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Email is required';
+                                }
+                                if (!v.contains('@')) {
+                                  return 'Enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
 
-                          AppTextField(
-                            controller: _passwordCtrl,
-                            label: 'Password',
-                            hint: '••••••••',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: !_showPassword,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) =>
-                                isLoading ? null : _submit(),
-                            suffix: IconButton(
-                              icon: Icon(
-                                _showPassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 20,
-                                color: AppTheme.textMuted,
+                            AppTextField(
+                              controller: _passwordCtrl,
+                              label: 'Password',
+                              hint: '••••••••',
+                              prefixIcon: Icons.lock_outline,
+                              obscureText: !_showPassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) =>
+                                  isLoading ? null : _submit(),
+                              suffix: IconButton(
+                                icon: Icon(
+                                  _showPassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  size: 18,
+                                  color: AppTheme.textMuted,
+                                ),
+                                onPressed: () => setState(
+                                    () => _showPassword = !_showPassword),
                               ),
-                              onPressed: () => setState(
-                                  () => _showPassword = !_showPassword),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Password is required';
+                                }
+                                if (v.length < 6) {
+                                  return 'Password must be at least 6 characters';
+                                }
+                                return null;
+                              },
                             ),
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'Password is required';
-                              }
-                              if (v.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                          // Email / password submit button
-                          SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: isLoading ? null : _submit,
-                              child: isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor:
-                                            AlwaysStoppedAnimation(
-                                                Colors.white),
-                                      ),
-                                    )
-                                  : Text(_mode == 'signup'
-                                      ? 'Create account'
-                                      : 'Sign in'),
+                            SizedBox(
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: isLoading ? null : _submit,
+                                child: isLoading
+                                    ? const _Spinner()
+                                    : Text(_mode == 'signup'
+                                        ? 'Create account'
+                                        : 'Sign in'),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // ── "or" divider — always visible ─────────────────────
+                    // Divider
                     const SizedBox(height: 20),
                     Row(
                       children: [
                         const Expanded(
-                            child: Divider(
-                                color: AppTheme.border, thickness: 0.5)),
+                            child: Divider(color: AppTheme.border)),
                         Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'or',
-                            style: TextStyle(
-                                fontSize: 12, color: AppTheme.textMuted),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('or',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted)),
                         ),
                         const Expanded(
-                            child: Divider(
-                                color: AppTheme.border, thickness: 0.5)),
+                            child: Divider(color: AppTheme.border)),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // ── OAuth buttons — always visible ────────────────────
+                    // OAuth buttons
                     _OAuthButton(
                       onPressed: _oauthLoading
                           ? null
@@ -590,16 +578,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       _OAuthButton(
                         onPressed: _oauthLoading
                             ? null
-                            : () =>
-                                _signInWithOAuth(OAuthProvider.apple),
+                            : () => _signInWithOAuth(OAuthProvider.apple),
                         loading: false,
-                        icon: const Icon(
-                          Icons.apple,
-                          size: 20,
-                          color: Colors.white,
-                        ),
+                        icon: const Icon(Icons.apple,
+                            size: 20, color: AppTheme.textPrimary),
                         label: 'Continue with Apple',
-                        dark: true,
                       ),
                     ],
 
@@ -610,7 +593,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               ),
             ),
 
-            // ── OAuth role-picker overlay ──────────────────────────────────
+            // OAuth role-picker overlay
             if (_showOAuthRolePicker)
               _OAuthRolePicker(
                 nameCtrl:     _oauthNameCtrl,
@@ -631,7 +614,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 // Sub-widgets
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Mode toggle (Sign Up / Sign In tab bar) ────────────────────────────────
+// ── Spinner ────────────────────────────────────────────────────────────────
+
+class _Spinner extends StatelessWidget {
+  const _Spinner();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          valueColor: AlwaysStoppedAnimation(AppTheme.bg),
+        ),
+      );
+}
+
+// ── Mode toggle ────────────────────────────────────────────────────────────
 
 class _ModeToggle extends StatelessWidget {
   final String mode;
@@ -644,22 +643,14 @@ class _ModeToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppTheme.bgPage,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border, width: 0.5),
+        color: AppTheme.bgSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Row(
         children: [
-          _Tab(
-            label: 'Sign Up',
-            isActive: mode == 'signup',
-            onTap: () => onSwitch('signup'),
-          ),
-          _Tab(
-            label: 'Sign In',
-            isActive: mode == 'signin',
-            onTap: () => onSwitch('signin'),
-          ),
+          _Tab(label: 'Sign Up',  isActive: mode == 'signup', onTap: () => onSwitch('signup')),
+          _Tab(label: 'Sign In',  isActive: mode == 'signin', onTap: () => onSwitch('signin')),
         ],
       ),
     );
@@ -671,8 +662,7 @@ class _Tab extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
-  const _Tab(
-      {required this.label, required this.isActive, required this.onTap});
+  const _Tab({required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -683,10 +673,10 @@ class _Tab extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isActive ? AppTheme.bgSurface : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
+            color: isActive ? AppTheme.bg : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
             border: isActive
-                ? Border.all(color: AppTheme.border, width: 0.5)
+                ? Border.all(color: AppTheme.border)
                 : null,
           ),
           child: Text(
@@ -694,8 +684,11 @@ class _Tab extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-              color: isActive ? AppTheme.textPrimary : AppTheme.textMuted,
+              fontWeight:
+                  isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive
+                  ? AppTheme.textPrimary
+                  : AppTheme.textMuted,
             ),
           ),
         ),
@@ -704,7 +697,7 @@ class _Tab extends StatelessWidget {
   }
 }
 
-// ── Role grid (reused for both email signup and OAuth role picker) ─────────
+// ── Role grid ──────────────────────────────────────────────────────────────
 
 class _RoleGrid extends StatelessWidget {
   final String? selected;
@@ -727,7 +720,7 @@ class _RoleGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 8,
       mainAxisSpacing: 8,
-      childAspectRatio: 3.2,
+      childAspectRatio: 3.0,
       children: _roles
           .map((r) => _RoleChip(
                 id: r.$1,
@@ -755,25 +748,28 @@ class _RoleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _roleAccent[id] ?? AppTheme.green;
+    final bg     = isSelected ? (_roleBg[id] ?? AppTheme.bgSurface) : AppTheme.bgSurface;
+    final border = isSelected
+        ? (_roleBorder[id] ?? AppTheme.border)
+        : AppTheme.border;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.green : AppTheme.bgSurface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? AppTheme.green : AppTheme.border,
-            width: isSelected ? 1.0 : 0.5,
-          ),
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: border, width: isSelected ? 1.5 : 1),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : AppTheme.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: isSelected ? accent : AppTheme.textMuted,
           ),
         ),
       ),
@@ -781,36 +777,29 @@ class _RoleChip extends StatelessWidget {
   }
 }
 
-// ── Magic-link toggle (password vs magic link for sign-in) ────────────────
+// ── Magic-link toggle ──────────────────────────────────────────────────────
 
 class _MagicLinkToggle extends StatelessWidget {
   final bool useMagicLink;
   final void Function(bool) onToggle;
 
-  const _MagicLinkToggle(
-      {required this.useMagicLink, required this.onToggle});
+  const _MagicLinkToggle({required this.useMagicLink, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppTheme.bgPage,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.border, width: 0.5),
+        color: AppTheme.bgSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Row(
         children: [
-          _MagicTab(
-            label: 'Password',
-            isActive: !useMagicLink,
-            onTap: () => onToggle(false),
-          ),
-          _MagicTab(
-            label: 'Magic Link',
-            isActive: useMagicLink,
-            onTap: () => onToggle(true),
-          ),
+          _MagicTab(label: 'Password', isActive: !useMagicLink,
+              onTap: () => onToggle(false)),
+          _MagicTab(label: 'Magic Link', isActive: useMagicLink,
+              onTap: () => onToggle(true)),
         ],
       ),
     );
@@ -822,8 +811,7 @@ class _MagicTab extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
-  const _MagicTab(
-      {required this.label, required this.isActive, required this.onTap});
+  const _MagicTab({required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -834,22 +822,17 @@ class _MagicTab extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isActive ? AppTheme.bgSurface : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: isActive
-                ? Border.all(color: AppTheme.border, width: 0.5)
-                : null,
+            color: isActive ? AppTheme.bg : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: isActive ? Border.all(color: AppTheme.border) : null,
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              fontWeight:
-                  isActive ? FontWeight.w700 : FontWeight.w400,
-              color: isActive
-                  ? AppTheme.textPrimary
-                  : AppTheme.textMuted,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive ? AppTheme.textPrimary : AppTheme.textMuted,
             ),
           ),
         ),
@@ -858,7 +841,7 @@ class _MagicTab extends StatelessWidget {
   }
 }
 
-// ── Footer sign-up/sign-in switch ─────────────────────────────────────────
+// ── Footer switch ──────────────────────────────────────────────────────────
 
 class _FooterSwitch extends StatelessWidget {
   final String mode;
@@ -882,7 +865,7 @@ class _FooterSwitch extends StatelessWidget {
             isSignUp ? 'Sign in' : 'Sign up',
             style: const TextStyle(
               fontSize: 13,
-              color: AppTheme.textSecondary,
+              color: AppTheme.green,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -892,21 +875,19 @@ class _FooterSwitch extends StatelessWidget {
   }
 }
 
-// ── OAuth provider button ──────────────────────────────────────────────────
+// ── OAuth button ───────────────────────────────────────────────────────────
 
 class _OAuthButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool loading;
   final Widget icon;
   final String label;
-  final bool dark;
 
   const _OAuthButton({
     required this.onPressed,
     required this.loading,
     required this.icon,
     required this.label,
-    this.dark = false,
   });
 
   @override
@@ -916,23 +897,19 @@ class _OAuthButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          backgroundColor: dark ? AppTheme.textPrimary : AppTheme.bgSurface,
-          side: BorderSide(
-            color: dark ? AppTheme.textPrimary : AppTheme.border,
-            width: 0.5,
-          ),
+          backgroundColor: AppTheme.bgSurface,
+          foregroundColor: AppTheme.textPrimary,
+          side: const BorderSide(color: AppTheme.border, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+              borderRadius: BorderRadius.circular(100)),
         ),
         child: loading
-            ? SizedBox(
+            ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation(
-                      dark ? Colors.white : AppTheme.green),
+                  valueColor: AlwaysStoppedAnimation(AppTheme.green),
                 ),
               )
             : Row(
@@ -940,14 +917,12 @@ class _OAuthButton extends StatelessWidget {
                 children: [
                   icon,
                   const SizedBox(width: 10),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: dark ? Colors.white : AppTheme.textPrimary,
-                    ),
-                  ),
+                  Text(label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textPrimary,
+                      )),
                 ],
               ),
       ),
@@ -962,17 +937,18 @@ class _GoogleIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return const SizedBox(
       width: 20,
       height: 20,
-      alignment: Alignment.center,
-      child: const Text(
-        'G',
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF4285F4), // Google blue
-          letterSpacing: -0.5,
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF4285F4),
+            letterSpacing: -0.5,
+          ),
         ),
       ),
     );
@@ -980,9 +956,6 @@ class _GoogleIcon extends StatelessWidget {
 }
 
 // ── OAuth role-picker overlay ──────────────────────────────────────────────
-//
-// Shown as a full-screen modal over the auth screen when an OAuth user
-// signs in for the first time and has no role in their JWT metadata.
 
 class _OAuthRolePicker extends StatelessWidget {
   final TextEditingController nameCtrl;
@@ -1002,21 +975,21 @@ class _OAuthRolePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppTheme.bgPage,
+      color: AppTheme.bg,
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const FlowLogo(size: 36),
+              const Center(child: FlowLogo(size: 38)),
               const SizedBox(height: 16),
               const Text(
                 'One last step',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 22,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
                   letterSpacing: -0.5,
                 ),
@@ -1029,23 +1002,24 @@ class _OAuthRolePicker extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              // Name field (pre-filled from OAuth provider)
+              // Name field
               TextField(
                 controller: nameCtrl,
+                style: const TextStyle(
+                    color: AppTheme.textPrimary, fontSize: 14),
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
-                  prefixIcon: Icon(Icons.person_outline, size: 20),
+                  prefixIcon: Icon(Icons.person_outline, size: 18),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // Role selection
               const Text(
                 'Select Role',
                 style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textMuted,
                 ),
               ),
               const SizedBox(height: 10),
@@ -1059,17 +1033,7 @@ class _OAuthRolePicker extends StatelessWidget {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : onSubmit,
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation(Colors.white),
-                          ),
-                        )
-                      : const Text('Continue'),
+                  child: isLoading ? const _Spinner() : const Text('Continue'),
                 ),
               ),
             ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The Flow logo mark — a rounded green square with two wave lines.
+/// The Flow logo mark — a rounded green square with two dark wave lines.
 class FlowLogo extends StatelessWidget {
   final double size;
 
@@ -27,9 +27,9 @@ class _FlowLogoPainter extends CustomPainter {
   void paint(Canvas canvas, Size canvasSize) {
     final s = size / 48;
 
-    // Rounded rect background
+    // Rounded rect background — new brand green
     final bgPaint = Paint()
-      ..color = const Color(0xFF2D6A2D)
+      ..color = const Color(0xFF4ADE80)
       ..style = PaintingStyle.fill;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -39,23 +39,23 @@ class _FlowLogoPainter extends CustomPainter {
       bgPaint,
     );
 
-    // Wave stroke
+    // Wave stroke — dark lines on bright green background
     final wavePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = size * 0.052
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Wave 1 — M14 26 C14 26 17 20 24 20 C31 20 34 26 34 26
-    wavePaint.color = Colors.white;
+    // Wave 1 — full opacity dark
+    wavePaint.color = const Color(0xFF0A0A0C);
     final wave1 = Path()
       ..moveTo(14 * s, 26 * s)
       ..cubicTo(14 * s, 26 * s, 17 * s, 20 * s, 24 * s, 20 * s)
       ..cubicTo(31 * s, 20 * s, 34 * s, 26 * s, 34 * s, 26 * s);
     canvas.drawPath(wave1, wavePaint);
 
-    // Wave 2 — M14 32 C14 32 17 26 24 26 C31 26 34 32 34 32 (opacity 0.5)
-    wavePaint.color = Colors.white.withValues(alpha: 0.5);
+    // Wave 2 — 50 % opacity dark
+    wavePaint.color = const Color(0xFF0A0A0C).withValues(alpha: 0.5);
     final wave2 = Path()
       ..moveTo(14 * s, 32 * s)
       ..cubicTo(14 * s, 32 * s, 17 * s, 26 * s, 24 * s, 26 * s)
