@@ -1,94 +1,143 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/router/app_router.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Brand colours
+//  Colour palette
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _C {
-  static const Color bgPage       = Color(0xFFF5F2EE);
-  static const Color bgSurface    = Color(0xFFFDFAF7);
-  static const Color border       = Color(0xFFE0DAD2);
-  static const Color textPrimary  = Color(0xFF1C1C1A);
-  static const Color textSecondary= Color(0xFF7A6E62);
-  static const Color textMuted    = Color(0xFFA89E93);
-  static const Color green        = Color(0xFF2D6A2D);
-  static const Color greenLight   = Color(0xFF6ECF6E);
-  static const Color greenBg      = Color(0xFFD6EDD6);
-  static const Color darkBg       = Color(0xFF141E14);
-  static const Color darkBorder   = Color(0xFF1F2E1F);
-  static const Color darkMuted    = Color(0xFF4A5E4A);
-  static const Color darkSubtle   = Color(0xFF3D4E3D);
+  static const Color bg     = Color(0xFF0A0A0C);
+  static const Color card   = Color(0xFF131316);
+  static const Color border = Color(0x12FFFFFF); // rgba(255,255,255,0.07)
+  static const Color text   = Color(0xFFF2F2F3);
+  static const Color muted  = Color(0xFF6B6B72);
+  static const Color green  = Color(0xFF4ADE80);
 }
 
-class _RoleColors {
+// ─────────────────────────────────────────────────────────────────────────────
+//  Typography helpers (Geist)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TextStyle _geist({
+  required double size,
+  FontWeight weight = FontWeight.w400,
+  Color color = _C.text,
+  double? letterSpacing,
+  double? height,
+  FontStyle? fontStyle,
+}) {
+  return GoogleFonts.dmSans(
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+    letterSpacing: letterSpacing,
+    height: height,
+    fontStyle: fontStyle,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Role styling
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RoleStyle {
   final Color bg;
-  final Color glow;
-  const _RoleColors(this.bg, this.glow);
+  final Color border;
+  final Color accent;
+  final Color label;
+  const _RoleStyle({
+    required this.bg,
+    required this.border,
+    required this.accent,
+    required this.label,
+  });
 }
 
-const _roleColors = {
-  'landlord':   _RoleColors(Color(0xFF1E3A5F), Color(0xFF60A5FA)),
-  'tenant':     _RoleColors(Color(0xFF1A3D1A), Color(0xFF6ECF6E)),
-  'contractor': _RoleColors(Color(0xFF7C2D00), Color(0xFFFB923C)),
-  'agent':      _RoleColors(Color(0xFF1C1C1A), Color(0xFFA78BFA)),
+const _roleStyles = <String, _RoleStyle>{
+  'landlord': _RoleStyle(
+    bg:     Color(0xFF0F2D1F),
+    border: Color(0x334ADE80), // rgba(74,222,128,0.2)
+    accent: Color(0xFF4ADE80),
+    label:  Color(0xB34ADE80), // rgba(74,222,128,0.7)
+  ),
+  'tenant': _RoleStyle(
+    bg:     Color(0xFF1A1A0A),
+    border: Color(0x33EAB308),
+    accent: Color(0xFFEAB308),
+    label:  Color(0xB3EAB308),
+  ),
+  'contractor': _RoleStyle(
+    bg:     Color(0xFF1F0F0A),
+    border: Color(0x33FB923C),
+    accent: Color(0xFFFB923C),
+    label:  Color(0xB3FB923C),
+  ),
+  'agent': _RoleStyle(
+    bg:     Color(0xFF0D0F2A),
+    border: Color(0x33818CF8),
+    accent: Color(0xFF818CF8),
+    label:  Color(0xB3818CF8),
+  ),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Flow logo — CustomPaint, reusable
+//  Logo — green rounded square with dark wave glyph
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _FlowLogo extends StatelessWidget {
   final double size;
-  const _FlowLogo({this.size = 28});
+  const _FlowLogo({this.size = 30});
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: Size(size, size), painter: _FlowLogoPainter());
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: _C.green,
+        borderRadius: BorderRadius.circular(size * 0.30),
+      ),
+      child: Center(
+        child: CustomPaint(
+          size: Size(size * 0.5, size * 0.5),
+          painter: _FlowWavePainter(),
+        ),
+      ),
+    );
   }
 }
 
-class _FlowLogoPainter extends CustomPainter {
+class _FlowWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.width;
-    final r = s * 0.27;
+    final f = s / 16.0;
 
-    // Background rounded rect
-    final bgPaint = Paint()..color = _C.green;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(r)),
-      bgPaint,
-    );
-
-    // Scale factor from viewBox 48 to actual size
-    final f = s / 48.0;
-
-    // Wave 1 — full opacity
-    final w1 = Paint()
-      ..color = Colors.white
+    final stroke = Paint()
+      ..color = _C.bg
       ..style = PaintingStyle.stroke
-      ..strokeWidth = s * 0.052
+      ..strokeWidth = 1.6 * f
       ..strokeCap = StrokeCap.round;
-    final p1 = Path()
-      ..moveTo(14 * f, 26 * f)
-      ..cubicTo(14 * f, 26 * f, 17 * f, 20 * f, 24 * f, 20 * f)
-      ..cubicTo(31 * f, 20 * f, 34 * f, 26 * f, 34 * f, 26 * f);
-    canvas.drawPath(p1, w1);
 
-    // Wave 2 — 50% opacity
-    final w2 = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
+    final p1 = Path()
+      ..moveTo(2 * f, 8 * f)
+      ..cubicTo(2 * f, 8 * f, 4 * f, 5 * f, 8 * f, 5 * f)
+      ..cubicTo(12 * f, 5 * f, 14 * f, 8 * f, 14 * f, 8 * f);
+    canvas.drawPath(p1, stroke);
+
+    final dim = Paint()
+      ..color = _C.bg.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = s * 0.052
+      ..strokeWidth = 1.6 * f
       ..strokeCap = StrokeCap.round;
     final p2 = Path()
-      ..moveTo(14 * f, 32 * f)
-      ..cubicTo(14 * f, 32 * f, 17 * f, 26 * f, 24 * f, 26 * f)
-      ..cubicTo(31 * f, 26 * f, 34 * f, 32 * f, 34 * f, 32 * f);
-    canvas.drawPath(p2, w2);
+      ..moveTo(2 * f, 11 * f)
+      ..cubicTo(2 * f, 11 * f, 4 * f, 8 * f, 8 * f, 8 * f)
+      ..cubicTo(12 * f, 8 * f, 14 * f, 11 * f, 14 * f, 11 * f);
+    canvas.drawPath(p2, dim);
   }
 
   @override
@@ -96,181 +145,194 @@ class _FlowLogoPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SVG icon painters
+//  Role icons — 24-unit viewBox, scalable
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _LandlordIconPainter extends CustomPainter {
+abstract class _StrokeIconPainter extends CustomPainter {
+  final Color color;
+  _StrokeIconPainter(this.color);
+
+  Paint _stroke(double f) => Paint()
+    ..color = color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.1 * f
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) =>
+      oldDelegate is _StrokeIconPainter && oldDelegate.color != color;
+}
+
+class _LandlordIconPainter extends _StrokeIconPainter {
+  _LandlordIconPainter(super.color);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final f = size.width / 18.0;
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 * f
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    final f = size.width / 24.0;
+    final p = _stroke(f);
 
     // Roof
     final roof = Path()
-      ..moveTo(2 * f, 9 * f)
-      ..lineTo(9 * f, 2.5 * f)
-      ..lineTo(16 * f, 9 * f);
+      ..moveTo(3 * f, 11 * f)
+      ..lineTo(12 * f, 3 * f)
+      ..lineTo(21 * f, 11 * f);
     canvas.drawPath(roof, p);
 
-    // House body
+    // Body with door cutout
     final body = Path()
-      ..moveTo(4 * f, 7.5 * f)
-      ..lineTo(4 * f, 15 * f)
-      ..cubicTo(4 * f, 15.55 * f, 4.45 * f, 16 * f, 5 * f, 16 * f)
-      ..lineTo(8 * f, 16 * f)
-      ..lineTo(8 * f, 13 * f)
-      ..lineTo(10 * f, 13 * f)
-      ..lineTo(10 * f, 16 * f)
-      ..lineTo(13 * f, 16 * f)
-      ..cubicTo(13.55 * f, 16 * f, 14 * f, 15.55 * f, 14 * f, 15 * f)
-      ..lineTo(14 * f, 7.5 * f);
+      ..moveTo(5 * f, 9.2 * f)
+      ..lineTo(5 * f, 20 * f)
+      ..lineTo(10 * f, 20 * f)
+      ..lineTo(10 * f, 14 * f)
+      ..lineTo(14 * f, 14 * f)
+      ..lineTo(14 * f, 20 * f)
+      ..lineTo(19 * f, 20 * f)
+      ..lineTo(19 * f, 9.2 * f);
     canvas.drawPath(body, p);
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _TenantIconPainter extends CustomPainter {
+class _TenantIconPainter extends _StrokeIconPainter {
+  _TenantIconPainter(super.color);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final f = size.width / 18.0;
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 * f
-      ..strokeCap = StrokeCap.round;
+    final f = size.width / 24.0;
+    final p = _stroke(f);
 
     // Head
-    canvas.drawCircle(Offset(9 * f, 6 * f), 3 * f, p);
+    canvas.drawCircle(Offset(12 * f, 8 * f), 4 * f, p);
 
-    // Body
+    // Body — curved shoulders
     final body = Path()
-      ..moveTo(3 * f, 16 * f)
-      ..cubicTo(3 * f, 12.686 * f, 5.686 * f, 11 * f, 9 * f, 11 * f)
-      ..cubicTo(12.314 * f, 11 * f, 15 * f, 12.686 * f, 15 * f, 16 * f);
+      ..moveTo(4 * f, 21 * f)
+      ..cubicTo(4 * f, 16 * f, 7 * f, 14 * f, 12 * f, 14 * f)
+      ..cubicTo(17 * f, 14 * f, 20 * f, 16 * f, 20 * f, 21 * f);
     canvas.drawPath(body, p);
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _ContractorIconPainter extends CustomPainter {
+class _ContractorIconPainter extends _StrokeIconPainter {
+  _ContractorIconPainter(super.color);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final f = size.width / 18.0;
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 * f
-      ..strokeCap = StrokeCap.round;
+    final f = size.width / 24.0;
+    final p = _stroke(f);
 
-    // Wrench handle
+    // Diagonal wrench: open jaw at top-right, handle to bottom-left
     final wrench = Path()
-      ..moveTo(10.5 * f, 3 * f)
-      ..cubicTo(10.5 * f, 3 * f, 12.607 * f, 3 * f, 12.607 * f, 5.107 * f)
-      ..cubicTo(12.607 * f, 7.214 * f, 10.5 * f, 8.657 * f, 10.5 * f, 8.657 * f)
-      ..lineTo(5.657 * f, 13.5 * f)
-      ..cubicTo(4.876 * f, 14.281 * f, 3.281 * f, 14.281 * f, 2.5 * f, 13.5 * f)
-      ..cubicTo(1.719 * f, 12.719 * f, 1.719 * f, 11.124 * f, 2.5 * f, 10.343 * f)
-      ..lineTo(7.343 * f, 5.5 * f);
+      ..moveTo(14.7 * f, 3 * f)
+      ..cubicTo(14.7 * f, 3 * f, 18 * f, 3 * f, 18 * f, 6.3 * f)
+      ..cubicTo(18 * f, 9.6 * f, 14.7 * f, 11.5 * f, 14.7 * f, 11.5 * f)
+      ..lineTo(8 * f, 18.2 * f)
+      ..cubicTo(6.9 * f, 19.3 * f, 4.7 * f, 19.3 * f, 3.6 * f, 18.2 * f)
+      ..cubicTo(2.5 * f, 17.1 * f, 2.5 * f, 14.9 * f, 3.6 * f, 13.8 * f)
+      ..lineTo(10.3 * f, 7.1 * f);
     canvas.drawPath(wrench, p);
-
-    // Bolt circle
-    canvas.drawCircle(Offset(13.5 * f, 4.5 * f), 1.5 * f, p);
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _AgentIconPainter extends CustomPainter {
+class _AgentIconPainter extends _StrokeIconPainter {
+  _AgentIconPainter(super.color);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final f = size.width / 18.0;
-    final stroke = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5 * f
-      ..strokeCap = StrokeCap.round;
+    final f = size.width / 24.0;
+    final p = _stroke(f);
 
-    // Briefcase body
+    // Body
     canvas.drawRRect(
-      RRect.fromLTRBR(3 * f, 7 * f, 15 * f, 15 * f, Radius.circular(1.5 * f)),
-      stroke,
+      RRect.fromLTRBR(
+        4 * f, 11 * f, 20 * f, 21 * f,
+        Radius.circular(2 * f),
+      ),
+      p,
     );
 
-    // Handle
-    final handle = Path()
-      ..moveTo(6 * f, 7 * f)
-      ..lineTo(6 * f, 5.5 * f)
-      ..cubicTo(6 * f, 3.843 * f, 7.343 * f, 2.5 * f, 9 * f, 2.5 * f)
-      ..cubicTo(10.657 * f, 2.5 * f, 12 * f, 3.843 * f, 12 * f, 5.5 * f)
-      ..lineTo(12 * f, 7 * f);
-    canvas.drawPath(handle, stroke);
-
-    // Lock dot
-    final fill = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(9 * f, 11 * f), 1.2 * f, fill);
+    // Arch
+    final arch = Path()
+      ..moveTo(8 * f, 11 * f)
+      ..lineTo(8 * f, 7 * f)
+      ..cubicTo(8 * f, 4.79 * f, 9.79 * f, 3 * f, 12 * f, 3 * f)
+      ..cubicTo(14.21 * f, 3 * f, 16 * f, 4.79 * f, 16 * f, 7 * f)
+      ..lineTo(16 * f, 11 * f);
+    canvas.drawPath(arch, p);
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _ArrowPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final f = size.width / 10.0;
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2 * f
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+// ─────────────────────────────────────────────────────────────────────────────
+//  Reusable: radial glow positioned inside a Stack
+// ─────────────────────────────────────────────────────────────────────────────
 
-    final path = Path()
-      ..moveTo(3 * f, 7 * f)
-      ..lineTo(7 * f, 3 * f)
-      ..moveTo(7 * f, 3 * f)
-      ..lineTo(4 * f, 3 * f)
-      ..moveTo(7 * f, 3 * f)
-      ..lineTo(7 * f, 6 * f);
-    canvas.drawPath(path, p);
+class _RadialGlow extends StatelessWidget {
+  final double width;
+  final double height;
+  final Color color;
+
+  const _RadialGlow({
+    required this.width,
+    required this.height,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 0.5,
+              colors: [color, Colors.transparent],
+              stops: const [0.0, 0.7],
+            ),
+          ),
+        ),
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _StarPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final f = size.width / 10.0;
-    final p = Paint()..color = _C.green;
-    final path = Path()
-      ..moveTo(5 * f, 1 * f)
-      ..lineTo(6.2 * f, 3.6 * f)
-      ..lineTo(9 * f, 4.1 * f)
-      ..lineTo(7 * f, 6 * f)
-      ..lineTo(7.5 * f, 8.9 * f)
-      ..lineTo(5 * f, 7.6 * f)
-      ..lineTo(2.5 * f, 8.9 * f)
-      ..lineTo(3 * f, 6 * f)
-      ..lineTo(1 * f, 4.1 * f)
-      ..lineTo(3.8 * f, 3.6 * f)
-      ..close();
-    canvas.drawPath(path, p);
-  }
+// ─────────────────────────────────────────────────────────────────────────────
+//  Pressed-state wrapper
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Pressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _Pressable({required this.child, required this.onTap});
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  State<_Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<_Pressable> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapUp:   (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: AnimatedOpacity(
+          opacity: _down ? 0.85 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -283,22 +345,21 @@ class LandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _C.bgPage,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: const [
-            _NavBar(),
-            _Hero(),
-            _StatsStrip(),
-            _RolesSection(),
-            _HowItWorks(),
-            _Testimonial(),
-            _BottomCta(),
-            _Footer(),
-          ],
+      backgroundColor: _C.bg,
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: const [
+              _NavBar(),
+              _Hero(),
+              _RolesSection(),
+              _HowItWorks(),
+              _FooterCta(),
+              _BottomBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -314,46 +375,39 @@ class _NavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, topPadding + 8, 20, 8),
-      decoration: const BoxDecoration(
-        color: _C.bgPage,
-        border: Border(bottom: BorderSide(color: _C.border, width: 0.5)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              const _FlowLogo(size: 28),
-              const SizedBox(width: 8),
-              const Text(
+              const _FlowLogo(size: 30),
+              const SizedBox(width: 10),
+              Text(
                 'Flow',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: _C.textPrimary,
-                  letterSpacing: -0.4,
+                style: _geist(
+                  size: 17,
+                  weight: FontWeight.w600,
+                  letterSpacing: -0.51,
                 ),
               ),
             ],
           ),
-          GestureDetector(
+          _Pressable(
             onTap: () => context.go(AppRoutes.auth),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFC8C0B5)),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: _C.border),
               ),
-              child: const Text(
+              child: Text(
                 'Sign in',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: _C.textPrimary,
+                style: _geist(
+                  size: 14,
+                  weight: FontWeight.w400,
+                  color: _C.text,
                 ),
               ),
             ),
@@ -373,124 +427,141 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _C.bgPage,
-      padding: const EdgeInsets.fromLTRB(20, 38, 20, 30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 36, 22, 44),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
         children: [
-          // Pill badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: _C.greenBg,
-              borderRadius: BorderRadius.circular(20),
+          // Glow behind headline
+          Positioned(
+            top: -20,
+            child: _RadialGlow(
+              width: 260,
+              height: 200,
+              color: _C.green.withValues(alpha: 0.13),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    color: _C.green,
-                    shape: BoxShape.circle,
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Pill badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _C.green.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(100),
+                  border: Border.all(
+                    color: _C.green.withValues(alpha: 0.18),
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Property management, simplified',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: _C.green,
-                    letterSpacing: 0.02,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Headline
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: 31,
-                fontWeight: FontWeight.w800,
-                color: _C.textPrimary,
-                height: 1.1,
-                letterSpacing: -1.2,
-              ),
-              children: [
-                TextSpan(text: 'Stop chasing.\n'),
-                TextSpan(
-                  text: 'Start flowing.',
-                  style: TextStyle(color: _C.green),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Subtitle
-          const Text(
-            'Free for tenants. Simple pricing for landlords and agents. Contractors keep 95% of every job.',
-            style: TextStyle(
-              fontSize: 13,
-              color: _C.textSecondary,
-              height: 1.65,
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // CTA button
-          GestureDetector(
-            onTap: () => context.go(AppRoutes.auth),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              decoration: BoxDecoration(
-                color: _C.green,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(
-                child: Text(
-                  'Get started',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Sign in link
-          Center(
-            child: GestureDetector(
-              onTap: () => context.go(AppRoutes.auth),
-              child: RichText(
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 11),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextSpan(
-                      text: 'Already have an account? ',
-                      style: TextStyle(color: _C.textMuted),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: _C.green,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                    TextSpan(
-                      text: 'Sign in',
-                      style: TextStyle(
-                        color: _C.textSecondary,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 6),
+                    Text(
+                      'Property management, simplified',
+                      style: _geist(
+                        size: 12,
+                        weight: FontWeight.w400,
+                        color: _C.green,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 24),
+
+              // Headline
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: _geist(
+                    size: 38,
+                    weight: FontWeight.w600,
+                    letterSpacing: -1.9,
+                    height: 1.06,
+                  ),
+                  children: [
+                    const TextSpan(text: 'Stop chasing.\n'),
+                    TextSpan(
+                      text: 'Start flowing.',
+                      style: _geist(
+                        size: 38,
+                        weight: FontWeight.w600,
+                        color: _C.green,
+                        letterSpacing: -1.9,
+                        height: 1.06,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Subtitle
+              Text(
+                'One app for landlords, tenants, contractors, and agents.',
+                textAlign: TextAlign.center,
+                style: _geist(
+                  size: 15,
+                  weight: FontWeight.w300,
+                  color: _C.muted,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 36),
+
+              // CTA
+              _Pressable(
+                onTap: () => context.go(AppRoutes.auth),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 17),
+                  decoration: BoxDecoration(
+                    color: _C.green,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Get started free',
+                      style: _geist(
+                        size: 16,
+                        weight: FontWeight.w500,
+                        color: _C.bg,
+                        letterSpacing: -0.32,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Sign-in link
+              _Pressable(
+                onTap: () => context.go(AppRoutes.auth),
+                child: RichText(
+                  text: TextSpan(
+                    style: _geist(size: 14, color: _C.muted),
+                    children: [
+                      const TextSpan(text: 'Already have an account? '),
+                      TextSpan(
+                        text: 'Sign in',
+                        style: _geist(size: 14, color: _C.text),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -499,123 +570,40 @@ class _Hero extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Stats strip
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StatsStrip extends StatelessWidget {
-  const _StatsStrip();
-
-  static const _stats = [
-    ('2.4k', 'Properties'),
-    ('98%', 'Issues resolved'),
-    ('4.9', 'App rating'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: _C.bgSurface,
-        border: Border(
-          top: BorderSide(color: _C.border, width: 0.5),
-          bottom: BorderSide(color: _C.border, width: 0.5),
-        ),
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: List.generate(_stats.length * 2 - 1, (i) {
-            if (i.isOdd) {
-              return Container(width: 0.5, color: _C.border);
-            }
-            final s = _stats[i ~/ 2];
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      s.$1,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: _C.textPrimary,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      s.$2,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w500,
-                        color: _C.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Role cards section
+//  Roles section
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _RoleData {
   final String id;
   final String label;
-  final String desc;
-  final String badge;
-  final String badgeType; // 'free', 'paid', 'cut'
-  final CustomPainter Function() iconPainter;
+  final CustomPainter Function(Color) iconBuilder;
   const _RoleData({
     required this.id,
     required this.label,
-    required this.desc,
-    required this.badge,
-    required this.badgeType,
-    required this.iconPainter,
+    required this.iconBuilder,
   });
 }
 
-final _roles = [
+final List<_RoleData> _roles = [
   _RoleData(
     id: 'landlord',
     label: 'Landlord',
-    desc: 'Manage your properties and tenants from one place',
-    badge: 'Subscription',
-    badgeType: 'paid',
-    iconPainter: () => _LandlordIconPainter(),
+    iconBuilder: (c) => _LandlordIconPainter(c),
   ),
   _RoleData(
     id: 'tenant',
     label: 'Tenant',
-    desc: 'Report issues and track repairs in real time',
-    badge: 'Free forever',
-    badgeType: 'free',
-    iconPainter: () => _TenantIconPainter(),
+    iconBuilder: (c) => _TenantIconPainter(c),
   ),
   _RoleData(
     id: 'contractor',
     label: 'Contractor',
-    desc: 'Receive jobs and quotes. Keep 95% of every job',
-    badge: '5% per job',
-    badgeType: 'cut',
-    iconPainter: () => _ContractorIconPainter(),
+    iconBuilder: (c) => _ContractorIconPainter(c),
   ),
   _RoleData(
     id: 'agent',
     label: 'Agent',
-    desc: 'Run your full portfolio. Add landlords and manage everything',
-    badge: 'Subscription',
-    badgeType: 'paid',
-    iconPainter: () => _AgentIconPainter(),
+    iconBuilder: (c) => _AgentIconPainter(c),
   ),
 ];
 
@@ -624,52 +612,40 @@ class _RolesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _C.bgPage,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 44),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'WHO IS IT FOR',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: _C.textMuted,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Built for\neveryone involved',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: _C.textPrimary,
-                    letterSpacing: -0.5,
-                    height: 1.15,
-                  ),
-                ),
-              ],
+          Text(
+            "WHO IT'S FOR",
+            style: _geist(
+              size: 11,
+              weight: FontWeight.w500,
+              color: _C.muted,
+              letterSpacing: 0.88,
             ),
           ),
-          // Grid
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 26),
-            child: GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.78,
-              children: _roles.map((r) => _RoleCard(data: r)).toList(),
+          const SizedBox(height: 10),
+          Text(
+            'Built for\neveryone.',
+            textAlign: TextAlign.center,
+            style: _geist(
+              size: 26,
+              weight: FontWeight.w600,
+              letterSpacing: -1.04,
+              height: 1.1,
             ),
+          ),
+          const SizedBox(height: 20),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1,
+            children: _roles.map((r) => _RoleCard(data: r)).toList(),
           ),
         ],
       ),
@@ -683,128 +659,56 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _roleColors[data.id]!;
-    final isAgent = data.id == 'agent';
+    final s = _roleStyles[data.id]!;
 
-    Color badgeBg;
-    Color badgeText;
-    switch (data.badgeType) {
-      case 'free':
-        badgeBg = const Color(0xFF6ECF6E).withValues(alpha: 0.2);
-        badgeText = _C.greenLight;
-        break;
-      case 'cut':
-        badgeBg = const Color(0xFFFB923C).withValues(alpha: 0.25);
-        badgeText = const Color(0xFFFB923C);
-        break;
-      default:
-        badgeBg = Colors.white.withValues(alpha: 0.1);
-        badgeText = Colors.white.withValues(alpha: 0.5);
-    }
-
-    return GestureDetector(
+    return _Pressable(
       onTap: () => context.go(AppRoutes.auth),
-      child: Container(
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(
-          color: colors.bg,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Stack(
-          children: [
-            // Glow
-            Positioned(
-              bottom: -18,
-              right: -18,
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: colors.glow.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 36),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Icon wrap
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: isAgent ? 0.08 : 0.13),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Center(
-                      child: CustomPaint(
-                        size: const Size(18, 18),
-                        painter: data.iconPainter(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    data.label,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    data.desc,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.6),
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: badgeBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      data.badge,
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: badgeText,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Arrow
-            Positioned(
-              bottom: 14,
-              right: 14,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          decoration: BoxDecoration(
+            color: s.bg,
+            border: Border.all(color: s.border),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Stack(
+            children: [
+              // Glow at bottom-centre, offset -20px below card bottom
+              Positioned(
+                bottom: -20,
+                left: 0,
+                right: 0,
                 child: Center(
-                  child: CustomPaint(
-                    size: const Size(10, 10),
-                    painter: _ArrowPainter(),
+                  child: _RadialGlow(
+                    width: 140,
+                    height: 140,
+                    color: s.accent.withValues(alpha: 0.20),
                   ),
                 ),
               ),
-            ),
-          ],
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomPaint(
+                      size: const Size(72, 72),
+                      painter: data.iconBuilder(s.accent),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      data.label,
+                      style: _geist(
+                        size: 13,
+                        weight: FontWeight.w400,
+                        color: s.label,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -819,90 +723,48 @@ class _HowItWorks extends StatelessWidget {
   const _HowItWorks();
 
   static const _steps = [
-    ('1', 'Create your account', 'Pick your role, verify your email \u2014 takes under a minute.'),
-    ('2', 'Add your property', 'Landlords add tenancies and invite tenants directly by email.'),
-    ('3', 'Everything flows', 'Incidents, quotes, documents \u2014 all in one thread, in real time.'),
+    ('1', 'Create your account', 'Pick your role, verify your email.'),
+    ('2', 'Add your property', 'Invite tenants directly by email.'),
+    ('3', 'Everything flows', 'Incidents, quotes, documents — one thread.'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: _C.bgSurface,
-        border: Border(top: BorderSide(color: _C.border, width: 0.5)),
-      ),
-      padding: const EdgeInsets.all(26),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 48),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             'HOW IT WORKS',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: _C.textMuted,
-              letterSpacing: 0.8,
+            style: _geist(
+              size: 11,
+              weight: FontWeight.w500,
+              color: _C.muted,
+              letterSpacing: 0.88,
             ),
           ),
-          const SizedBox(height: 16),
-          ...List.generate(_steps.length * 2 - 1, (i) {
-            if (i.isOdd) {
-              // Connector
-              return Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Container(width: 1, height: 16, color: _C.border),
-              );
-            }
-            final step = _steps[i ~/ 2];
+          const SizedBox(height: 10),
+          Text(
+            'Up in a\nminute.',
+            textAlign: TextAlign.center,
+            style: _geist(
+              size: 26,
+              weight: FontWeight.w600,
+              letterSpacing: -1.04,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ..._steps.asMap().entries.map((e) {
+            final isLast = e.key == _steps.length - 1;
+            final step = e.value;
             return Padding(
-              padding: EdgeInsets.only(top: i > 0 ? 16 : 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: const BoxDecoration(
-                      color: _C.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        step.$1,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          step.$2,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _C.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          step.$3,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: _C.textMuted,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+              child: _StepCard(
+                number: step.$1,
+                title: step.$2,
+                body: step.$3,
               ),
             );
           }),
@@ -912,125 +774,71 @@ class _HowItWorks extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Testimonial
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _Testimonial extends StatelessWidget {
-  const _Testimonial();
+class _StepCard extends StatelessWidget {
+  final String number;
+  final String title;
+  final String body;
+  const _StepCard({
+    required this.number,
+    required this.title,
+    required this.body,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: _C.bgPage,
-        border: Border(top: BorderSide(color: _C.border, width: 0.5)),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _C.border),
       ),
-      padding: const EdgeInsets.all(26),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'WHAT PEOPLE SAY',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: _C.textMuted,
-              letterSpacing: 0.8,
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: _C.green.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: _C.green.withValues(alpha: 0.20),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: _geist(
+                  size: 13,
+                  weight: FontWeight.w500,
+                  color: _C.green,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: _C.bgSurface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _C.border, width: 0.5),
-            ),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Stars
-                Row(
-                  children: List.generate(
-                    5,
-                    (_) => Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: CustomPaint(
-                        size: const Size(10, 10),
-                        painter: _StarPainter(),
-                      ),
-                    ),
+                Text(
+                  title,
+                  style: _geist(
+                    size: 15,
+                    weight: FontWeight.w500,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 10),
-                // Quote
-                RichText(
-                  text: const TextSpan(
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _C.textPrimary,
-                      height: 1.6,
-                    ),
-                    children: [
-                      TextSpan(
-                        text:
-                            '\u201CI used to spend my Sunday evenings chasing contractors. ',
-                      ),
-                      TextSpan(
-                        text: 'Flow cut that down to nothing.',
-                        style: TextStyle(color: _C.green),
-                      ),
-                      TextSpan(text: ' Everything\u2019s just there.\u201D'),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: _geist(
+                    size: 13,
+                    weight: FontWeight.w300,
+                    color: _C.muted,
+                    height: 1.5,
                   ),
-                ),
-                const SizedBox(height: 14),
-                // Author
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1E3A5F),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'MK',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Marcus K.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _C.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          'Landlord \u00B7 6 properties',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: _C.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -1042,130 +850,179 @@ class _Testimonial extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Bottom CTA
+//  Footer CTA card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BottomCta extends StatelessWidget {
-  const _BottomCta();
+class _FooterCta extends StatelessWidget {
+  const _FooterCta();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _C.darkBg,
-      padding: const EdgeInsets.fromLTRB(20, 32, 20, 36),
-      child: Column(
-        children: [
-          // Headline
-          RichText(
-            textAlign: TextAlign.center,
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                height: 1.12,
-                letterSpacing: -0.6,
-              ),
-              children: [
-                TextSpan(text: 'Stop chasing.\n'),
-                TextSpan(
-                  text: 'Start flowing.',
-                  style: TextStyle(color: _C.greenLight),
-                ),
-              ],
-            ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _C.card,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: _C.border),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Free for tenants. Straightforward pricing for everyone else.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: _C.darkMuted,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 22),
-
-          // CTA
-          GestureDetector(
-            onTap: () => context.go(AppRoutes.auth),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              decoration: BoxDecoration(
-                color: _C.green,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(
-                child: Text(
-                  'Get started',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+          child: Stack(
+            children: [
+              // Glow at the bottom
+              Positioned(
+                bottom: -40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _RadialGlow(
+                    width: 220,
+                    height: 180,
+                    color: _C.green.withValues(alpha: 0.12),
                   ),
                 ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 36),
+                child: Column(
+                  children: [
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: _geist(
+                          size: 30,
+                          weight: FontWeight.w600,
+                          letterSpacing: -1.2,
+                          height: 1.1,
+                        ),
+                        children: [
+                          const TextSpan(text: 'Stop chasing.\n'),
+                          TextSpan(
+                            text: 'Start flowing.',
+                            style: _geist(
+                              size: 30,
+                              weight: FontWeight.w600,
+                              color: _C.green,
+                              letterSpacing: -1.2,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Free for tenants. Fair for everyone else.',
+                      textAlign: TextAlign.center,
+                      style: _geist(
+                        size: 13,
+                        weight: FontWeight.w300,
+                        color: _C.muted,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _Pressable(
+                      onTap: () => context.go(AppRoutes.auth),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 17),
+                        decoration: BoxDecoration(
+                          color: _C.green,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Get started free',
+                            style: _geist(
+                              size: 16,
+                              weight: FontWeight.w500,
+                              color: _C.bg,
+                              letterSpacing: -0.32,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _Pressable(
+                      onTap: () => context.go(AppRoutes.auth),
+                      child: RichText(
+                        text: TextSpan(
+                          style: _geist(size: 13, color: _C.muted),
+                          children: [
+                            const TextSpan(text: 'Have an account? '),
+                            TextSpan(
+                              text: 'Sign in',
+                              style: _geist(size: 13, color: _C.text),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () => context.go(AppRoutes.auth),
-            child: const Text(
-              'Already have an account? Sign in',
-              style: TextStyle(fontSize: 11, color: _C.darkSubtle),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Footer
+//  Bottom footer bar
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _Footer extends StatelessWidget {
-  const _Footer();
+class _BottomBar extends StatelessWidget {
+  const _BottomBar();
 
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: _C.darkBg,
-        border: Border(top: BorderSide(color: _C.darkBorder, width: 0.5)),
-      ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(22, 16, 22, 28 + bottomPadding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              const _FlowLogo(size: 18),
-              const SizedBox(width: 6),
-              const Text(
-                'Flow',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _C.darkMuted,
-                ),
-              ),
-            ],
+          Text(
+            'Flow',
+            style: _geist(
+              size: 13,
+              weight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.20),
+              letterSpacing: -0.26,
+            ),
           ),
           Row(
-            children: const [
-              Text('Privacy', style: TextStyle(fontSize: 10, color: _C.darkSubtle)),
-              SizedBox(width: 12),
-              Text('Terms', style: TextStyle(fontSize: 10, color: _C.darkSubtle)),
-              SizedBox(width: 12),
-              Text('Contact', style: TextStyle(fontSize: 10, color: _C.darkSubtle)),
+            children: [
+              _FooterLink('Privacy', onTap: () {}),
+              const SizedBox(width: 16),
+              _FooterLink('Terms', onTap: () {}),
+              const SizedBox(width: 16),
+              _FooterLink('Contact', onTap: () {}),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _FooterLink(this.label, {required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Pressable(
+      onTap: onTap,
+      child: Text(
+        label,
+        style: _geist(size: 12, color: _C.muted),
       ),
     );
   }
