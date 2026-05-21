@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/dashboard_providers.dart';
+import 'agent_dashboard.dart';
 import 'contractor_dashboard.dart';
 import 'landlord_dashboard.dart';
 import 'tenant_dashboard.dart';
@@ -36,7 +37,7 @@ class DashboardScreen extends ConsumerWidget {
             'landlord' => LandlordDashboard(profile: profile),
             'tenant' => TenantDashboard(profile: profile),
             'contractor' => ContractorDashboard(profile: profile),
-            'agent' => _AgentPlaceholder(profile: profile),
+            'agent' => const AgentDashboard(),
             _ => _AgentPlaceholder(profile: profile),
           };
         },
