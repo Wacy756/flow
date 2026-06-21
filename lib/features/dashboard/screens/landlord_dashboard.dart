@@ -1170,7 +1170,7 @@ class _IncidentsContentState extends ConsumerState<_IncidentsContent> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
           child: Row(children: [
-            Text('Issues',
+            Text('Maintenance',
               style: TextStyle(
                 color: p.text, fontSize: 22,
                 fontWeight: FontWeight.w700, letterSpacing: -0.5)),
