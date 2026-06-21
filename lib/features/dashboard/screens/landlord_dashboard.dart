@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/dialogs.dart';
 import '../../../core/widgets/role_sidebar.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../models/compliance_certificate.dart';
@@ -849,32 +850,18 @@ class _PropertiesContentState extends ConsumerState<_PropertiesContent> {
     );
   }
 
-  void _confirmDeleteProperty(PropertyRecord pr) {
-    final p = AbodePalette.of(context);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: p.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete property',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: p.text, letterSpacing: -0.3)),
-        content: Text(
-          'Remove ${pr.addressLine1}? This permanently deletes the property and cannot be undone.',
-          style: TextStyle(color: p.sub, fontSize: 13, height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: p.muted))),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(deleteTenancyProvider.notifier).delete(pr.id);
-            },
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w700))),
-        ],
-      ),
+  Future<void> _confirmDeleteProperty(PropertyRecord pr) async {
+    final confirmed = await showAbodeConfirmDialog(
+      context,
+      title: 'Delete property',
+      body: 'Remove ${pr.addressLine1}? This permanently deletes the property and cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+      icon: Icons.home_outlined,
     );
+    if (confirmed == true) {
+      ref.read(deleteTenancyProvider.notifier).delete(pr.id);
+    }
   }
 }
 

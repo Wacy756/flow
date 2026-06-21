@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/dialogs.dart';
 import '../models/rent_payment.dart';
 import '../models/tenancy.dart';
 import '../providers/dashboard_providers.dart';
@@ -440,27 +441,12 @@ class _DdMandateCard extends ConsumerWidget {
                   textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
                 onPressed: isCollecting ? null : () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: p.card,
-                      title: Text('Collect via Direct Debit',
-                          style: TextStyle(color: p.text, fontSize: 17, fontWeight: FontWeight.w700)),
-                      content: Text(
-                        'This will collect ${fmt.format(next.amountDue)} from the tenant\'s bank account now. This cannot be undone.',
-                        style: TextStyle(color: p.sub, fontSize: 14, height: 1.5),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: Text('Cancel', style: TextStyle(color: p.sub)),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: Text('Collect', style: TextStyle(color: p.green, fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ),
+                  final confirmed = await showAbodeConfirmDialog(
+                    context,
+                    title: 'Collect via Direct Debit',
+                    body: 'This will collect ${fmt.format(next.amountDue)} from the tenant\'s bank account now. This cannot be undone.',
+                    confirmLabel: 'Collect',
+                    icon: Icons.account_balance_outlined,
                   );
                   if (confirmed != true) return;
                   await ref.read(collectDirectDebitProvider.notifier).collect(
@@ -771,20 +757,84 @@ class _DiscrepancyBar extends ConsumerWidget {
     final ctrl = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Resolve Discrepancy'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(
-            labelText: 'Resolution note (optional)',
-            hintText: 'e.g. Confirmed payment received, bank delay'),
-          maxLines: 2,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Mark resolved')),
-        ],
-      ),
+      barrierDismissible: true,
+      builder: (ctx) {
+        final pd = AbodePalette.of(ctx);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 360),
+            decoration: BoxDecoration(
+              color: pd.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: pd.border),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Resolve Discrepancy',
+                  style: TextStyle(
+                    color: pd.text, fontSize: 17,
+                    fontWeight: FontWeight.w700, letterSpacing: -0.3)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: ctrl,
+                  maxLines: 2,
+                  style: TextStyle(color: pd.text, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Confirmed payment received, bank delay',
+                    hintStyle: TextStyle(color: pd.sub, fontSize: 13),
+                    filled: true,
+                    fillColor: pd.bg,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: pd.border)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: pd.border)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: pd.green)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: pd.border),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12))),
+                      child: Text('Cancel',
+                        style: TextStyle(
+                          color: pd.sub, fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: pd.green,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Mark resolved',
+                        style: TextStyle(
+                          color: Colors.white, fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        );
+      },
     );
     if (confirmed == true && context.mounted) {
       await ref.read(resolveRentDiscrepancyProvider.notifier).resolve(

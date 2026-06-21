@@ -3241,6 +3241,7 @@ class AdminStats {
   final int contractors;
   final int agents;
   final int activeTenancies;
+  final int totalProperties;
   final int openDisputes;
   final int pendingVetting;
   final double totalPlatformFees;
@@ -3252,6 +3253,7 @@ class AdminStats {
     required this.contractors,
     required this.agents,
     required this.activeTenancies,
+    required this.totalProperties,
     required this.openDisputes,
     required this.pendingVetting,
     required this.totalPlatformFees,
@@ -3266,13 +3268,15 @@ Future<AdminStats> adminStats(Ref ref) async {
     supabase.from('incidents').select('id').eq('status', 'disputed').isFilter('dispute_resolved_at', null),
     supabase.from('contractor_details').select('id').eq('verification_status', 'pending_review'),
     supabase.from('incidents').select('platform_fee').eq('payout_status', 'released'),
+    supabase.from('properties').select('id'),
   ]);
 
-  final users     = results[0] as List;
-  final tenancies = results[1] as List;
-  final disputes  = results[2] as List;
-  final pending   = results[3] as List;
-  final fees      = results[4] as List;
+  final users      = results[0] as List;
+  final tenancies  = results[1] as List;
+  final disputes   = results[2] as List;
+  final pending    = results[3] as List;
+  final fees       = results[4] as List;
+  final properties = results[5] as List;
 
   final totalFees = fees.fold<double>(0, (sum, r) {
     final v = r['platform_fee'];
@@ -3287,6 +3291,7 @@ Future<AdminStats> adminStats(Ref ref) async {
     contractors:       users.where((u) => u['role'] == 'contractor').length,
     agents:            users.where((u) => u['role'] == 'agent').length,
     activeTenancies:   tenancies.length,
+    totalProperties:   properties.length,
     openDisputes:      disputes.length,
     pendingVetting:    pending.length,
     totalPlatformFees: totalFees,
