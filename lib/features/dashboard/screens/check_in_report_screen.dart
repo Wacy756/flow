@@ -2367,8 +2367,8 @@ class _ShareLinkSheetState extends State<_ShareLinkSheet> {
   void initState() {
     super.initState();
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final rand = Random();
-    final token = List.generate(24, (_) => chars[rand.nextInt(chars.length)]).join();
+    final rand = Random.secure();
+    final token = List.generate(32, (_) => chars[rand.nextInt(chars.length)]).join();
     _link = 'https://app.useabode.co.uk/inspect/$token';
   }
 
