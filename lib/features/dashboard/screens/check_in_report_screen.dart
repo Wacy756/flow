@@ -4,10 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 import '../../../core/widgets/adaptive_sheet.dart';
-
+import '../../../core/widgets/tap_captcha.dart';
 import '../../../core/services/pdf_service.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/app_colors.dart';
@@ -2073,6 +2074,7 @@ class _PartnerBookingScreenState extends State<_PartnerBookingScreen> {
   final _notesCtrl = TextEditingController();
   bool _sending = false;
   bool _sent = false;
+  bool _captchaVerified = false;
 
   @override
   void dispose() { _notesCtrl.dispose(); super.dispose(); }
@@ -2085,6 +2087,8 @@ class _PartnerBookingScreenState extends State<_PartnerBookingScreen> {
   Color get _partnerColor => widget.partner == 'aiic'
       ? const Color(0xFF8B5CF6)
       : const Color(0xFF3B82F6);
+  String get _partnerPrice =>
+      widget.partner == 'aiic' ? '£99' : '£89';
 
   String get _accessLabel => switch (widget.accessMethod) {
     _AccessMethod.landlordPresent => 'Landlord present',
@@ -2094,10 +2098,65 @@ class _PartnerBookingScreenState extends State<_PartnerBookingScreen> {
     _AccessMethod.smartLock => 'Smart lock',
   };
 
+  String get _accessMethodKey => switch (widget.accessMethod) {
+    _AccessMethod.landlordPresent => 'landlord_present',
+    _AccessMethod.lockbox         => 'lockbox',
+    _AccessMethod.agentKeys       => 'agent_keys',
+    _AccessMethod.smartLock       => 'smart_lock',
+  };
+
   Future<void> _send() async {
+    if (widget.tenancy.propertyId == null) {
+      showAbodeToast(context, 'Property not found — please try again.', isError: true);
+      return;
+    }
     setState(() => _sending = true);
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) setState(() { _sending = false; _sent = true; });
+    try {
+      final pd = _preferredDate;
+      final response = await supabase.functions.invoke(
+        'create-payment-intent',
+        body: {
+          'partner':       widget.partner,
+          'propertyId':    widget.tenancy.propertyId,
+          'accessMethod':  _accessMethodKey,
+          'preferredDate': pd != null
+              ? '${pd.year}-${pd.month.toString().padLeft(2, '0')}-${pd.day.toString().padLeft(2, '0')}'
+              : null,
+          'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        },
+      );
+
+      final clientSecret = response.data?['clientSecret'] as String?;
+      if (clientSecret == null) {
+        throw Exception('Payment setup failed — please try again.');
+      }
+
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'Abode',
+        ),
+      );
+      await Stripe.instance.presentPaymentSheet();
+
+      if (mounted) setState(() { _sending = false; _sent = true; });
+    } on StripeException catch (e) {
+      if (mounted) {
+        setState(() => _sending = false);
+        if (e.error.code != FailureCode.Canceled) {
+          showAbodeToast(
+            context,
+            e.error.localizedMessage ?? 'Payment failed — please try again.',
+            isError: true,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sending = false);
+        showAbodeToast(context, e.toString(), isError: true);
+      }
+    }
   }
 
   @override
@@ -2199,6 +2258,13 @@ class _PartnerBookingScreenState extends State<_PartnerBookingScreen> {
         label: 'Access',
         value: _accessLabel,
         p: p),
+      const SizedBox(height: 12),
+      _CIBookingRow(
+        icon: Icons.payments_outlined,
+        label: 'Clerk fee',
+        value: _partnerPrice,
+        p: p,
+        highlight: true),
       if (widget.accessMethod == _AccessMethod.lockbox &&
           widget.lockboxCode != null) ...[
         const SizedBox(height: 12),
@@ -2292,10 +2358,18 @@ class _PartnerBookingScreenState extends State<_PartnerBookingScreen> {
       ),
       const SizedBox(height: 28),
 
+      // Human verification — required before paying
+      if (!_captchaVerified) ...[
+        TapCaptcha(onVerified: () => setState(() => _captchaVerified = true)),
+        const SizedBox(height: 20),
+      ],
+
       SizedBox(
         width: double.infinity, height: 52,
         child: ElevatedButton(
-          onPressed: _preferredDate == null || _sending ? null : _send,
+          onPressed: _preferredDate == null || _sending || !_captchaVerified
+              ? null
+              : _send,
           style: ElevatedButton.styleFrom(
             backgroundColor: _partnerColor,
             disabledBackgroundColor: _partnerColor.withValues(alpha: 0.4),
@@ -2305,7 +2379,7 @@ class _PartnerBookingScreenState extends State<_PartnerBookingScreen> {
           child: _sending
               ? const SizedBox(width: 18, height: 18,
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text('Request a Clerk from $_partnerLabel'),
+              : Text('Pay $_partnerPrice & Request Clerk'),
         ),
       ),
     ],
@@ -2361,19 +2435,41 @@ class _ShareLinkSheet extends StatefulWidget {
 class _ShareLinkSheetState extends State<_ShareLinkSheet> {
   AbodePalette get p => AbodePalette.of(context);
   bool _copied = false;
-  late final String _link;
+  bool _saving = true;
+  String? _link;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final rand = Random.secure();
-    final token = List.generate(32, (_) => chars[rand.nextInt(chars.length)]).join();
-    _link = 'https://app.useabode.co.uk/inspect/$token';
+    _generateAndSave();
+  }
+
+  Future<void> _generateAndSave() async {
+    try {
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      final rand = Random.secure();
+      final token =
+          List.generate(32, (_) => chars[rand.nextInt(chars.length)]).join();
+
+      await supabase.from('check_in_tokens').insert({
+        'token':       token,
+        'property_id': widget.tenancy.propertyId,
+        'landlord_id': supabase.auth.currentUser!.id,
+      });
+
+      if (mounted) setState(() {
+        _link = 'https://app.useabode.co.uk/inspect/$token';
+        _saving = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _saving = false; });
+    }
   }
 
   Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: _link));
+    if (_link == null) return;
+    await Clipboard.setData(ClipboardData(text: _link!));
     setState(() => _copied = true);
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) setState(() => _copied = false);
@@ -2440,49 +2536,79 @@ class _ShareLinkSheetState extends State<_ShareLinkSheet> {
               decoration: BoxDecoration(
                 color: p.card,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: p.border)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Secure link',
-                    style: TextStyle(
-                        color: p.sub, fontSize: 11, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(child: Text(
-                    _link,
-                    style: TextStyle(color: p.blue, fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
-                  )),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _copy,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: _copied
-                            ? const Color(0xFF22C55E).withValues(alpha: 0.1)
-                            : const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(
-                          _copied ? Icons.check_rounded : Icons.copy_rounded,
-                          size: 13,
-                          color: _copied
-                              ? const Color(0xFF22C55E)
-                              : const Color(0xFF3B82F6)),
-                        const SizedBox(width: 4),
-                        Text(_copied ? 'Copied' : 'Copy',
-                          style: TextStyle(
-                            color: _copied
-                                ? const Color(0xFF22C55E)
-                                : const Color(0xFF3B82F6),
-                            fontSize: 12, fontWeight: FontWeight.w700)),
-                      ]),
-                    ),
-                  ),
-                ]),
-              ]),
+                border: Border.all(
+                  color: _error != null
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.35)
+                      : p.border)),
+              child: _saving
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: SizedBox(
+                          width: 20, height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                      ))
+                  : _error != null
+                      ? Row(children: [
+                          const Icon(Icons.error_outline,
+                              color: Color(0xFFEF4444), size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(
+                            'Failed to create link — tap to retry',
+                            style: const TextStyle(
+                                color: Color(0xFFEF4444), fontSize: 12),
+                          )),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() { _error = null; _saving = true; });
+                              _generateAndSave();
+                            },
+                            child: const Icon(Icons.refresh_rounded,
+                                color: Color(0xFF3B82F6), size: 18),
+                          ),
+                        ])
+                      : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Secure link',
+                              style: TextStyle(
+                                  color: p.sub, fontSize: 11, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            Expanded(child: Text(
+                              _link ?? '',
+                              style: TextStyle(color: p.blue, fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: _copy,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: _copied
+                                      ? const Color(0xFF22C55E).withValues(alpha: 0.1)
+                                      : const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8)),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(
+                                    _copied ? Icons.check_rounded : Icons.copy_rounded,
+                                    size: 13,
+                                    color: _copied
+                                        ? const Color(0xFF22C55E)
+                                        : const Color(0xFF3B82F6)),
+                                  const SizedBox(width: 4),
+                                  Text(_copied ? 'Copied' : 'Copy',
+                                    style: TextStyle(
+                                      color: _copied
+                                          ? const Color(0xFF22C55E)
+                                          : const Color(0xFF3B82F6),
+                                      fontSize: 12, fontWeight: FontWeight.w700)),
+                                ]),
+                              ),
+                            ),
+                          ]),
+                        ]),
             ),
             const SizedBox(height: 12),
 

@@ -1,55 +1,79 @@
 name: flow_app
-description: "Flow - Property management that flows."
+description: Abode — property management for landlords, tenants, contractors & agents.
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.7.0
 
 dependencies:
   flutter:
     sdk: flutter
 
   # Navigation
-  go_router: ^14.6.3
+  go_router: ^14.8.1
+
+  # Web URL strategy (clean paths instead of /#/) — web-only, used via a
+  # conditional import so mobile builds are unaffected.
+  flutter_web_plugins:
+    sdk: flutter
 
   # State management
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
 
-  # Supabase
-  supabase_flutter: ^2.9.1
+  # Backend
+  supabase_flutter: ^2.9.0
 
-  # Environment variables
-  flutter_dotenv: ^5.2.1
+  # In-app purchases
+  purchases_flutter: ^10.2.2
+
+  # Crash reporting
+  sentry_flutter: ^8.14.0
 
   # UI
-  cupertino_icons: ^1.0.8
-  google_fonts: ^6.2.1
+  google_fonts: ^6.3.3
 
-  # HTTP client (address lookup etc.)
-  http: ^1.6.0
-
-  # File picking (compliance doc uploads — Phase 8)
+  # File handling
   file_picker: ^8.1.7
+  url_launcher: ^6.3.1
 
-  # URL launching (open docs in browser)
-  url_launcher: ^6.3.2
+  # Maps
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.2
 
-  # Map + location (Phase 6)
-  flutter_map: ^6.1.0
-  latlong2: ^0.9.0
-  geolocator: ^12.0.0
+  # Splash screen
+  flutter_native_splash: ^2.4.3
+
+  # PDF generation
+  pdf: ^3.11.1
+  printing: ^5.13.2
+
+  # Push notifications (Firebase) — re-enable after running flutterfire configure
+  # firebase_core: ^3.13.0
+  # firebase_messaging: ^15.2.5
+  # flutter_local_notifications: ^18.0.1
+
+  # Payments
+  flutter_stripe: ^13.0.0
 
   # Utilities
-  intl: ^0.19.0
+  flutter_dotenv: ^5.2.1
+  intl: ^0.20.2
+  http: ^1.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  build_runner: ^2.4.13
-  riverpod_generator: ^2.6.1
+  flutter_lints: ^6.0.0
+  riverpod_generator: ^2.6.5
+  build_runner: ^2.4.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
 
 flutter:
   uses-material-design: true
