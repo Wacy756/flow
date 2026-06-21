@@ -1,7 +1,3 @@
-# Secrets
-.env
-.claude/settings.local.json
-
 # Miscellaneous
 *.class
 *.log
@@ -47,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Secrets & local config
+.env
+.env.*
+.mcp.json
+.claude/
+
+# Cloudflare / Wrangler
+.wrangler/
+
+# Session / audit notes (not source code)
+NEXT_SESSION_PROMPT.md
+WEB_DASHBOARD_AUDIT.md
