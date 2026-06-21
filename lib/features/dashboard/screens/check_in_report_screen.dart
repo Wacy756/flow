@@ -1862,16 +1862,6 @@ class _CheckInModeSheetState extends State<_CheckInModeSheet> {
       p: p,
     ),
     const SizedBox(height: 8),
-    _AccessCard(
-      icon: Icons.phonelink_lock_outlined,
-      title: 'Smart lock',
-      subtitle: 'Digital access code — integration coming soon',
-      selected: false,
-      onTap: null,
-      p: p,
-      disabled: true,
-    ),
-    const SizedBox(height: 8),
   ];
 }
 
