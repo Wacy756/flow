@@ -3128,6 +3128,68 @@ class AdminVetContractor extends _$AdminVetContractor {
 }
 
 // ---------------------------------------------------------------------------
+// Admin — all contractors (all statuses)
+// ---------------------------------------------------------------------------
+
+@riverpod
+Future<List<Map<String, dynamic>>> adminAllContractors(Ref ref) async {
+  final rows = await supabase
+      .from('contractor_details')
+      .select('*, contractor:profiles!contractor_id(full_name, email, phone)')
+      .order('submitted_for_review_at', ascending: false, nullsFirst: false);
+  return (rows as List)
+      .map((r) => Map<String, dynamic>.from(r as Map))
+      .toList();
+}
+
+// ---------------------------------------------------------------------------
+// Admin — contractor invites
+// ---------------------------------------------------------------------------
+
+@riverpod
+Future<List<Map<String, dynamic>>> adminContractorInvites(Ref ref) async {
+  final rows = await supabase.rpc('list_contractor_invites');
+  return (rows as List)
+      .map((r) => Map<String, dynamic>.from(r as Map))
+      .toList();
+}
+
+// ---------------------------------------------------------------------------
+// Admin — send contractor invite
+// ---------------------------------------------------------------------------
+
+@riverpod
+class AdminInviteContractor extends _$AdminInviteContractor {
+  @override
+  AsyncValue<void> build() => const AsyncData(null);
+
+  Future<bool> invite(String email) async {
+    state = const AsyncLoading();
+    try {
+      final token = await supabase.rpc(
+        'create_contractor_invite',
+        params: {'p_email': email},
+      ) as String;
+
+      await supabase.functions.invoke(
+        'send-invitation-email',
+        body: {
+          'invite_type': 'contractor_invite',
+          'contractor_email': email,
+          'token': token,
+        },
+      );
+
+      state = const AsyncData(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Contractor — reset for re-application after rejection
 // ---------------------------------------------------------------------------
 
