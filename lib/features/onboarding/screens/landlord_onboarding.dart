@@ -128,6 +128,15 @@ class _LandlordOnboardingState extends ConsumerState<LandlordOnboarding> {
           'invited_email': tenantEmail,
           'status':        'pending',
         });
+        // Send invite email — best-effort, non-fatal
+        try {
+          await supabase.functions.invoke('send-invitation-email', body: {
+            'tenant_email':     tenantEmail,
+            'landlord_name':    widget.profile.fullName,
+            'property_address': '${_addr1Ctrl.text.trim()}, ${_postcodeCtrl.text.trim().toUpperCase()}',
+            'tenancy_id':       propertyId,
+          });
+        } catch (_) {}
       }
 
       // 3. Team invites
