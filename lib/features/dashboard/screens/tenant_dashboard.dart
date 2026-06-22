@@ -27,6 +27,7 @@ import '../widgets/notifications_sheet.dart';
 import '../widgets/settings_sheet.dart';
 import '../widgets/quote_review_sheet.dart';
 import '../widgets/tenant_visit_confirm_sheet.dart';
+import '../widgets/tenant_rent_sheet.dart';
 import '../widgets/tenant_rights_sheet.dart';
 import 'messaging_screen.dart';
 import 'package:flow_app/core/widgets/abode_toast.dart';
@@ -363,7 +364,7 @@ Widget _sectionHeader(BuildContext context, String title,
 }
 
 // ─── Rent countdown card ──────────────────────────────────────────────────────
-class _RentCountdownCard extends StatelessWidget {
+class _RentCountdownCard extends ConsumerWidget {
   final Tenancy tenancy;
   const _RentCountdownCard({required this.tenancy});
 
@@ -372,7 +373,6 @@ class _RentCountdownCard extends StatelessWidget {
     final startDay = tenancy.startDate?.day ?? 1;
     var candidate  = DateTime(now.year, now.month, startDay);
     if (candidate.isBefore(now)) {
-      // Add one month correctly (handles December → January year rollover)
       final nextMonth = now.month == 12 ? 1 : now.month + 1;
       final nextYear  = now.month == 12 ? now.year + 1 : now.year;
       candidate = DateTime(nextYear, nextMonth, startDay);
@@ -381,7 +381,7 @@ class _RentCountdownCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p        = AbodePalette.of(context);
     final rent     = tenancy.monthlyRent!;
     final nextDue  = _nextRentDate();
@@ -399,12 +399,19 @@ class _RentCountdownCard extends StatelessWidget {
       daysUntilEnd  = tenancy.endDate!.difference(DateTime.now()).inDays;
     }
 
+    // Check if current period's rent has been paid
+    final payments = ref.watch(rentPaymentsProvider(tenancy.tenancyId)).valueOrNull ?? [];
+    final currentPayment = payments.where((pay) =>
+      pay.dueDate.year == nextDue.year && pay.dueDate.month == nextDue.month
+    ).firstOrNull;
+    final isPaid = currentPayment?.isPaid ?? false;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: p.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: (isPaid ? p.green : color).withValues(alpha: 0.3)),
         boxShadow: p.cardShadow,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -412,36 +419,48 @@ class _RentCountdownCard extends StatelessWidget {
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: (isPaid ? p.green : color).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(Icons.payments_outlined, color: color, size: 17),
+            child: Icon(
+              isPaid ? Icons.check_circle_outline_rounded : Icons.payments_outlined,
+              color: isPaid ? p.green : color, size: 17),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Next rent: ${fmt.format(rent)}',
-                  style: TextStyle(
-                      color: p.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700)),
+                  style: TextStyle(color: p.text, fontSize: 14, fontWeight: FontWeight.w700)),
               Text(
-                'Due ${nextDue.day}/${nextDue.month}/${nextDue.year}'
-                ' · ${daysLeft == 0 ? "Today!" : daysLeft == 1 ? "Tomorrow" : "in $daysLeft days"}',
-                style: TextStyle(color: color, fontSize: 12),
+                isPaid
+                    ? 'Paid — awaiting confirmation'
+                    : 'Due ${nextDue.day}/${nextDue.month}/${nextDue.year}'
+                      ' · ${daysLeft == 0 ? "Today!" : daysLeft == 1 ? "Tomorrow" : "in $daysLeft days"}',
+                style: TextStyle(color: isPaid ? p.green : color, fontSize: 12),
               ),
             ]),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              daysLeft == 0 ? 'Today' : '$daysLeft days',
-              style: TextStyle(
-                  color: color, fontSize: 13, fontWeight: FontWeight.w800),
+          const SizedBox(width: 8),
+          // Pay button or paid badge
+          GestureDetector(
+            onTap: () => showTenantRentSheet(context, tenancy: tenancy, dueDate: nextDue),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isPaid
+                    ? p.green.withValues(alpha: 0.12)
+                    : _accent,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: isPaid ? null : [
+                  BoxShadow(color: _accent.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Text(
+                isPaid ? 'Paid ✓' : 'Pay',
+                style: TextStyle(
+                  color: isPaid ? p.green : Colors.white,
+                  fontSize: 13, fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ]),
@@ -450,12 +469,9 @@ class _RentCountdownCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Tenancy progress',
-                  style: TextStyle(color: p.sub, fontSize: 11)),
+              Text('Tenancy progress', style: TextStyle(color: p.sub, fontSize: 11)),
               Text(
-                daysUntilEnd > 0
-                    ? '$daysUntilEnd days remaining'
-                    : 'Ends today',
+                daysUntilEnd > 0 ? '$daysUntilEnd days remaining' : 'Ends today',
                 style: TextStyle(color: p.sub, fontSize: 11),
               ),
             ],
@@ -466,8 +482,7 @@ class _RentCountdownCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: p.border,
-              valueColor:
-                  AlwaysStoppedAnimation(daysUntilEnd <= 60 ? p.amber : _accent),
+              valueColor: AlwaysStoppedAnimation(daysUntilEnd <= 60 ? p.amber : _accent),
               minHeight: 5,
             ),
           ),
