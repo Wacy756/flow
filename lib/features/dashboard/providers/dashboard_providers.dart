@@ -3653,3 +3653,51 @@ class CreateRepositPolicy extends _$CreateRepositPolicy {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+/// Creates a Stripe Checkout Session and returns the hosted URL.
+/// [interval] is 'monthly' (default) or 'annual'.
+@riverpod
+class CreateStripeCheckout extends _$CreateStripeCheckout {
+  @override
+  AsyncValue<void> build() => const AsyncData(null);
+
+  Future<String?> createSession({String interval = 'monthly'}) async {
+    state = const AsyncLoading();
+    try {
+      final res = await supabase.functions.invoke(
+        'create-checkout-session',
+        body: {'interval': interval},
+      );
+      final url = (res.data as Map<String, dynamic>?)?['url'] as String?;
+      state = const AsyncData(null);
+      return url;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return null;
+    }
+  }
+}
+
+/// Opens the Stripe Customer Portal (manage/cancel subscriptions).
+@riverpod
+class OpenCustomerPortal extends _$OpenCustomerPortal {
+  @override
+  AsyncValue<void> build() => const AsyncData(null);
+
+  Future<String?> getUrl() async {
+    state = const AsyncLoading();
+    try {
+      final res = await supabase.functions.invoke('customer-portal');
+      final url = (res.data as Map<String, dynamic>?)?['url'] as String?;
+      state = const AsyncData(null);
+      return url;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return null;
+    }
+  }
+}

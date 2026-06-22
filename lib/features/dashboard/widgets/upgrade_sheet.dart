@@ -2,9 +2,8 @@ import 'package:flow_app/core/widgets/adaptive_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/purchases/purchases_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/dialogs.dart';
 import '../models/plan.dart';
@@ -44,8 +43,9 @@ class _ManagePlanSheet extends ConsumerStatefulWidget {
 
 class _ManagePlanSheetState extends ConsumerState<_ManagePlanSheet> {
   AbodePlan? _selected;
-  bool       _saving       = false;
-  int        _propCount    = 3; // for live price estimate
+  bool       _saving          = false;
+  int        _propCount       = 3; // for live price estimate
+  String     _billingInterval = 'annual'; // 'monthly' or 'annual'
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +146,17 @@ class _ManagePlanSheetState extends ConsumerState<_ManagePlanSheet> {
                 ),
               ),
             ),
+
+            // Billing interval toggle (only shown when upgrading)
+            if (!isDowngrade && !isCancel && _selected != null && _selected != AbodePlan.free)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: _BillingToggle(
+                  value: _billingInterval,
+                  onChange: (v) => setState(() => _billingInterval = v),
+                  propCount: _propCount,
+                ),
+              ),
 
             // Downgrade warning
             if (isDowngrade || isCancel)
@@ -658,27 +669,38 @@ class _ManagePlanSheetState extends ConsumerState<_ManagePlanSheet> {
     if (isDowngrade) {
       final confirmed = await _confirmDowngrade(context, current, next);
       if (!confirmed) return;
-      await openSubscriptionManagement();
+      await _openCustomerPortal(context);
       return;
     }
 
     setState(() => _saving = true);
     try {
-      await purchasePlan(next.id);
-      ref.invalidate(currentPlanProvider);
-      ref.invalidate(currentProfileProvider);
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        showAbodeToast(context, 'Upgraded to ${next.displayName} — welcome!');
-      }
-    } on PurchasesErrorCode catch (e) {
+      final url = await ref
+          .read(createStripeCheckoutProvider.notifier)
+          .createSession(interval: _billingInterval);
+      if (url == null) throw Exception('No checkout URL');
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
       setState(() => _saving = false);
-      if (e == PurchasesErrorCode.purchaseCancelledError) return;
       if (context.mounted) {
-        showAbodeToast(context, 'Purchase failed: ${e.name}', isError: true);
+        showAbodeToast(context, 'Could not open checkout. Try again.', isError: true);
       }
-    } catch (_) {
+    }
+  }
+
+  Future<void> _openCustomerPortal(BuildContext context) async {
+    setState(() => _saving = true);
+    try {
+      final url = await ref.read(openCustomerPortalProvider.notifier).getUrl();
+      if (url == null) throw Exception('No portal URL');
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
       setState(() => _saving = false);
+      if (context.mounted) {
+        showAbodeToast(context, 'Could not open billing portal. Try again.', isError: true);
+      }
     }
   }
 
@@ -789,4 +811,109 @@ class _Pill extends StatelessWidget {
           ),
         ),
       );
+}
+
+// ─── Billing interval toggle ──────────────────────────────────────────────
+class _BillingToggle extends StatelessWidget {
+  final String value;
+  final void Function(String) onChange;
+  final int propCount;
+  const _BillingToggle({
+    required this.value,
+    required this.onChange,
+    required this.propCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = AbodePalette.of(context);
+    const accent = _abodeAccent;
+
+    final monthlyPrice  = AbodePricing.monthlyBilled(propCount);
+    final annualMonthly = AbodePricing.monthlyAnnualBilled(propCount);
+    final saving = monthlyPrice > 0
+        ? ((monthlyPrice - annualMonthly) / monthlyPrice * 100).round()
+        : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: p.border),
+      ),
+      child: Row(children: [
+        _ToggleOption(
+          label: 'Annual',
+          sublabel: saving > 0 ? 'Save $saving%' : null,
+          selected: value == 'annual',
+          accent: accent,
+          p: p,
+          onTap: () => onChange('annual'),
+        ),
+        _ToggleOption(
+          label: 'Monthly',
+          sublabel: '+20%',
+          selected: value == 'monthly',
+          accent: accent,
+          p: p,
+          onTap: () => onChange('monthly'),
+        ),
+      ]),
+    );
+  }
+}
+
+class _ToggleOption extends StatelessWidget {
+  final String label;
+  final String? sublabel;
+  final bool selected;
+  final Color accent;
+  final AbodePalette p;
+  final VoidCallback onTap;
+  const _ToggleOption({
+    required this.label,
+    required this.sublabel,
+    required this.selected,
+    required this.accent,
+    required this.p,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: selected
+              ? Border.all(color: accent.withValues(alpha: 0.3))
+              : null,
+        ),
+        child: Column(children: [
+          Text(label,
+            style: TextStyle(
+              color: selected ? accent : p.sub,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            )),
+          if (sublabel != null) ...[
+            const SizedBox(height: 2),
+            Text(sublabel!,
+              style: TextStyle(
+                color: selected
+                    ? accent.withValues(alpha: 0.75)
+                    : p.muted,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              )),
+          ],
+        ]),
+      ),
+    ),
+  );
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,22 +7,56 @@ import '../../../core/router/app_router.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/dashboard_providers.dart';
+import '../../onboarding/screens/onboarding_flow.dart';
+import '../widgets/upgrade_sheet.dart';
+import 'admin_dashboard.dart';
 import 'agent_dashboard.dart';
 import 'contractor_dashboard.dart';
 import 'landlord_dashboard.dart';
 import 'tenant_dashboard.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/abode_toast.dart';
 
 /// Entry point for the dashboard — loads the user's profile and routes to
 /// the correct role-specific view.
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleCheckoutReturn());
+    }
+  }
+
+  void _handleCheckoutReturn() {
+    final params = Uri.base.queryParameters;
+    final checkout = params['checkout'];
+    if (checkout == null) return;
+
+    if (checkout == 'success') {
+      ref.invalidate(currentPlanProvider);
+      ref.invalidate(currentProfileProvider);
+      showAbodeToast(context, 'Subscription active — welcome to Abode!');
+    } else if (checkout == 'cancel') {
+      showAbodeToast(context, 'Checkout cancelled.', isError: true);
+    }
+
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = AbodePalette.of(context);
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: p.bg,
       body: profileAsync.when(
         loading: () => const _LoadingView(),
         error: (e, _) => _ErrorView(error: e.toString()),
@@ -33,12 +68,22 @@ class DashboardScreen extends ConsumerWidget {
             return const _LoadingView();
           }
 
+          // New users go through onboarding first
+          if (!profile.onboardingCompleted) {
+            return OnboardingFlow(
+              profile: profile,
+              onComplete: () => ref.invalidate(currentProfileProvider),
+            );
+          }
+
+          if (profile.isAdmin) return const AdminDashboard();
+
           return switch (profile.role) {
             'landlord' => LandlordDashboard(profile: profile),
             'tenant' => TenantDashboard(profile: profile),
             'contractor' => ContractorDashboard(profile: profile),
             'agent' => const AgentDashboard(),
-            _ => _AgentPlaceholder(profile: profile),
+            _ => const AgentDashboard(),
           };
         },
       ),
@@ -47,20 +92,19 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading
-// ---------------------------------------------------------------------------
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
 
   @override
-  Widget build(BuildContext context) => const Center(
-        child: CircularProgressIndicator(color: AppTheme.primary),
+  Widget build(BuildContext context) {
+    final p = AbodePalette.of(context);
+    return Center(
+        child: CircularProgressIndicator(color: p.green),
       );
+  }
 }
 
-// ---------------------------------------------------------------------------
-// Error
 // ---------------------------------------------------------------------------
 
 class _ErrorView extends StatelessWidget {
@@ -68,7 +112,9 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error});
 
   @override
-  Widget build(BuildContext context) => Center(
+  Widget build(BuildContext context) {
+    final p = AbodePalette.of(context);
+    return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -82,7 +128,7 @@ class _ErrorView extends StatelessWidget {
               Text(error,
                   textAlign: TextAlign.center,
                   style:
-                      const TextStyle(color: AppTheme.textSecondary)),
+                      TextStyle(color: p.sub)),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
@@ -95,82 +141,5 @@ class _ErrorView extends StatelessWidget {
           ),
         ),
       );
-}
-
-// ---------------------------------------------------------------------------
-// Agent placeholder (Phase 6+)
-// ---------------------------------------------------------------------------
-
-class _AgentPlaceholder extends StatelessWidget {
-  final UserProfile profile;
-  const _AgentPlaceholder({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    final gradient = AppTheme.roleGradient(profile.role);
-
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('Flow'),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await supabase.auth.signOut();
-              if (context.mounted) context.go(AppRoutes.landing);
-            },
-            child: const Text('Sign Out',
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(Icons.business_center_outlined,
-                    color: Colors.white, size: 36),
-              ),
-              const SizedBox(height: 20),
-              Text('Welcome, ${profile.fullName}!',
-                  style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 5),
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  profile.role.toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Agent dashboard — coming soon.',
-                style: TextStyle(color: AppTheme.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

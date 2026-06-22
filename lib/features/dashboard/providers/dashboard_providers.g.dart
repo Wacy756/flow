@@ -1547,7 +1547,7 @@ final adminContractorInvitesProvider =
 // ignore: unused_element
 typedef AdminContractorInvitesRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$adminStatsHash() => r'9aa4bdf6175c87f30a86e1f0db92d58726ed6e21';
+String _$adminStatsHash() => r'7629da15c76197ee538e435c2f3fcd6a1430033c';
 
 /// See also [adminStats].
 @ProviderFor(adminStats)
@@ -2443,5 +2443,48 @@ final createRepositPolicyProvider =
     );
 
 typedef _$CreateRepositPolicy = AutoDisposeNotifier<AsyncValue<void>>;
+String _$createStripeCheckoutHash() =>
+    r'db352d4c4445590b2d61d54433c6eba5c40e1823';
+
+/// Creates a Stripe Checkout Session and returns the hosted URL.
+/// [interval] is 'monthly' (default) or 'annual'.
+///
+/// Copied from [CreateStripeCheckout].
+@ProviderFor(CreateStripeCheckout)
+final createStripeCheckoutProvider = AutoDisposeNotifierProvider<
+  CreateStripeCheckout,
+  AsyncValue<void>
+>.internal(
+  CreateStripeCheckout.new,
+  name: r'createStripeCheckoutProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$createStripeCheckoutHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$CreateStripeCheckout = AutoDisposeNotifier<AsyncValue<void>>;
+String _$openCustomerPortalHash() =>
+    r'3e3ed5dc1ee57faf04e791f04c8dfd559d689ae8';
+
+/// Opens the Stripe Customer Portal (manage/cancel subscriptions).
+///
+/// Copied from [OpenCustomerPortal].
+@ProviderFor(OpenCustomerPortal)
+final openCustomerPortalProvider =
+    AutoDisposeNotifierProvider<OpenCustomerPortal, AsyncValue<void>>.internal(
+      OpenCustomerPortal.new,
+      name: r'openCustomerPortalProvider',
+      debugGetCreateSourceHash:
+          const bool.fromEnvironment('dart.vm.product')
+              ? null
+              : _$openCustomerPortalHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$OpenCustomerPortal = AutoDisposeNotifier<AsyncValue<void>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
