@@ -30,11 +30,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late final AnimationController _tagCtrl;
   late final Animation<double> _tagOpacity;
 
-  late final AnimationController _exitCtrl;
-  late final Animation<double> _exitOpacity;
-
   bool _authChecked = false;
   bool _animationComplete = false;
+
+  // easeOutExpo approximation — fast start, long graceful ease-out
+  static const _expo = Cubic(0.16, 1.0, 0.3, 1.0);
 
   @override
   void initState() {
@@ -47,44 +47,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _logoCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 620),
     );
-    _logoScale = Tween<double>(begin: 0.55, end: 1.0).animate(
-      CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut),
+    // easeOutBack: subtle overshoot — confident, not bouncy
+    _logoScale = Tween<double>(begin: 0.62, end: 1.0).animate(
+      CurvedAnimation(parent: _logoCtrl, curve: Curves.easeOutBack),
     );
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoCtrl,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
 
     _wordCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 480),
     );
     _wordOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _wordCtrl, curve: Curves.easeOut),
     );
     _wordSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.18),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _wordCtrl, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _wordCtrl, curve: _expo));
 
     _tagCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 380),
     );
     _tagOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _tagCtrl, curve: Curves.easeOut),
-    );
-
-    _exitCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 380),
-    );
-    _exitOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _exitCtrl, curve: Curves.easeIn),
     );
 
     _runSequence();
@@ -94,11 +87,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _runSequence() async {
     await Future.delayed(const Duration(milliseconds: 100));
     await _logoCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 80));
-    await _wordCtrl.forward();
     await Future.delayed(const Duration(milliseconds: 60));
+    await _wordCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 40));
     await _tagCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Shorter hold — let the user move on sooner
+    await Future.delayed(const Duration(milliseconds: 220));
     _animationComplete = true;
     _maybeExit();
   }
@@ -114,20 +108,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _exit();
   }
 
-  Future<void> _exit() async {
+  void _exit() {
     if (!mounted) return;
     final isAuthed = supabase.auth.currentSession != null;
     if (isAuthed) {
       context.go(AppRoutes.dashboard);
-      return;
+    } else {
+      context.go(kIsWeb ? AppRoutes.landing : AppRoutes.welcome);
     }
-    if (!kIsWeb) {
-      // Fade out splash content before revealing the welcome screen so the
-      // transition feels like one continuous animation rather than a hard cut.
-      await _exitCtrl.forward();
-      if (!mounted) return;
-    }
-    context.go(kIsWeb ? AppRoutes.landing : AppRoutes.welcome);
   }
 
   @override
@@ -135,7 +123,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _logoCtrl.dispose();
     _wordCtrl.dispose();
     _tagCtrl.dispose();
-    _exitCtrl.dispose();
     super.dispose();
   }
 
@@ -146,53 +133,53 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     return Scaffold(
       backgroundColor: bg,
       body: AnimatedBuilder(
-        animation: Listenable.merge([_logoCtrl, _wordCtrl, _tagCtrl, _exitCtrl]),
+        animation: Listenable.merge([_logoCtrl, _wordCtrl, _tagCtrl]),
         builder: (context, _) {
-          return FadeTransition(
-            opacity: _exitOpacity,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ScaleTransition(
-                    scale: _logoScale,
-                    child: FadeTransition(
-                      opacity: _logoOpacity,
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ScaleTransition(
+                  scale: _logoScale,
+                  child: FadeTransition(
+                    opacity: _logoOpacity,
+                    child: Hero(
+                      tag: 'abode-logo',
                       child: const AbodeLogo(size: 72),
                     ),
                   ),
-                  const SizedBox(height: 22),
-                  SlideTransition(
-                    position: _wordSlide,
-                    child: FadeTransition(
-                      opacity: _wordOpacity,
-                      child: const Text(
-                        'Abode',
-                        style: TextStyle(
-                          color: Color(0xFFF0F0EE),
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1.2,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  FadeTransition(
-                    opacity: _tagOpacity,
+                ),
+                const SizedBox(height: 22),
+                SlideTransition(
+                  position: _wordSlide,
+                  child: FadeTransition(
+                    opacity: _wordOpacity,
                     child: const Text(
-                      'Property, simplified.',
+                      'Abode',
                       style: TextStyle(
-                        color: Color(0xFF555558),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0.1,
+                        color: Color(0xFFF0F0EE),
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1.2,
+                        height: 1,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                FadeTransition(
+                  opacity: _tagOpacity,
+                  child: const Text(
+                    'Property, simplified.',
+                    style: TextStyle(
+                      color: Color(0xFF555558),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },

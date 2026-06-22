@@ -44,11 +44,11 @@ class AppRoutes {
 Page<void> _noTransitionPage(Widget child) =>
     NoTransitionPage<void>(child: child);
 
-Page<void> _fadePage(LocalKey key, Widget child) =>
+Page<void> _fadePage(LocalKey key, Widget child, {Duration duration = const Duration(milliseconds: 250)}) =>
     CustomTransitionPage<void>(
       key: key,
       child: child,
-      transitionDuration: const Duration(milliseconds: 250),
+      transitionDuration: duration,
       reverseTransitionDuration: const Duration(milliseconds: 200),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
@@ -123,8 +123,12 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.welcome,
-        pageBuilder: (context, state) =>
-            _noTransitionPage(const MobileWelcomeScreen()),
+        // 480ms crossfade — long enough for the Hero logo to fly into position
+        pageBuilder: (context, state) => _fadePage(
+          state.pageKey,
+          const MobileWelcomeScreen(),
+          duration: const Duration(milliseconds: 480),
+        ),
       ),
       GoRoute(
         path: AppRoutes.landing,
