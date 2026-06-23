@@ -61,6 +61,29 @@ final currentPlanProvider = AutoDisposeFutureProvider<AbodePlan>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CurrentPlanRef = AutoDisposeFutureProviderRef<AbodePlan>;
+String _$landlordSubscriptionStatusHash() =>
+    r'b3f1d0f00c813c58915b5131601b269bdf0c0d78';
+
+/// Stripe subscription status from profiles. null = not subscribed.
+/// Values: 'active' | 'trialing' | 'past_due' | 'unpaid' | 'cancelled' | null
+///
+/// Copied from [landlordSubscriptionStatus].
+@ProviderFor(landlordSubscriptionStatus)
+final landlordSubscriptionStatusProvider =
+    AutoDisposeFutureProvider<String?>.internal(
+      landlordSubscriptionStatus,
+      name: r'landlordSubscriptionStatusProvider',
+      debugGetCreateSourceHash:
+          const bool.fromEnvironment('dart.vm.product')
+              ? null
+              : _$landlordSubscriptionStatusHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef LandlordSubscriptionStatusRef = AutoDisposeFutureProviderRef<String?>;
 String _$landlordTenanciesHash() => r'b740aa6c8e96991ecca7594ccdfd3ad198817c51';
 
 /// See also [landlordTenancies].

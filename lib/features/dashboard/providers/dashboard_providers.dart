@@ -170,6 +170,20 @@ Future<AbodePlan> currentPlan(Ref ref) async {
   return AbodePlan.fromString(data?['selected_plan'] as String?);
 }
 
+/// Stripe subscription status from profiles. null = not subscribed.
+/// Values: 'active' | 'trialing' | 'past_due' | 'unpaid' | 'cancelled' | null
+@riverpod
+Future<String?> landlordSubscriptionStatus(Ref ref) async {
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
+  final data = await supabase
+      .from('profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .maybeSingle();
+  return data?['subscription_status'] as String?;
+}
+
 // ---------------------------------------------------------------------------
 // Landlord — tenancies
 // ---------------------------------------------------------------------------
@@ -2564,6 +2578,38 @@ final landlordAllRentPaymentsProvider = FutureProvider<List<RentPayment>>((ref) 
         .toList();
   } catch (e, st) {
     dev.log('landlordAllRentPaymentsProvider error', error: e, stackTrace: st,
+        name: 'dashboard');
+    return [];
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Landlord — tenancies that have rent configured but no schedule generated yet
+// ---------------------------------------------------------------------------
+
+final tenanciesWithoutScheduleProvider = FutureProvider<List<String>>((ref) async {
+  final user = supabase.auth.currentUser;
+  if (user == null) return [];
+  try {
+    final tenancyRows = await supabase
+        .from('tenancies')
+        .select('id')
+        .eq('landlord_id', user.id)
+        .eq('status', 'active')
+        .not('monthly_rent', 'is', null)
+        .not('start_date', 'is', null);
+    final ids = (tenancyRows as List).map((r) => r['id'] as String).toList();
+    if (ids.isEmpty) return [];
+    final paymentRows = await supabase
+        .from('rent_payments')
+        .select('tenancy_id')
+        .inFilter('tenancy_id', ids);
+    final withPayments = (paymentRows as List)
+        .map((r) => r['tenancy_id'] as String)
+        .toSet();
+    return ids.where((id) => !withPayments.contains(id)).toList();
+  } catch (e, st) {
+    dev.log('tenanciesWithoutScheduleProvider error', error: e, stackTrace: st,
         name: 'dashboard');
     return [];
   }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/dashboard_providers.dart';
+import 'upgrade_sheet.dart';
 
 void showAddPropertySheet(BuildContext context) {
   showAdaptiveSheet(
@@ -99,6 +100,72 @@ class _AddPropertySheetState extends ConsumerState<_AddPropertySheet> {
   Widget build(BuildContext context) {
     final p = AbodePalette.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    // Gate: first property is always free; 2nd+ requires an active subscription.
+    final propertiesAsync = ref.watch(landlordPropertiesProvider);
+    final subscriptionAsync = ref.watch(landlordSubscriptionStatusProvider);
+    final propertyCount = propertiesAsync.valueOrNull?.length ?? 0;
+    final subscriptionStatus = subscriptionAsync.valueOrNull;
+    final needsUpgrade = propertyCount >= 1 &&
+        subscriptionStatus != 'active' &&
+        subscriptionStatus != 'trialing';
+
+    if (needsUpgrade) {
+      return Container(
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: p.border, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            Container(
+              width: 56, height: 56,
+              decoration: BoxDecoration(
+                color: const Color(0xFFA855F7).withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_outline_rounded, color: Color(0xFFA855F7), size: 26),
+            ),
+            const SizedBox(height: 16),
+            Text('Your first property is free',
+                style: TextStyle(color: p.text, fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(
+              'Unlock unlimited properties from £3.50/property/month — every feature included.',
+              style: TextStyle(color: p.sub, fontSize: 14, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  showUpgradeSheet(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFA855F7),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                child: const Text('View plans'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(

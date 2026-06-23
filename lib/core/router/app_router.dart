@@ -16,6 +16,7 @@ import '../../features/inspect/screens/inspect_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/splash/mobile_welcome_screen.dart';
+import '../../features/dashboard/screens/dd_redirect_screen.dart';
 import '../supabase/supabase_client.dart';
 
 part 'app_router.g.dart';
@@ -24,18 +25,20 @@ part 'app_router.g.dart';
 // Route names
 // ---------------------------------------------------------------------------
 class AppRoutes {
-  static const String splash    = '/splash';
-  static const String welcome   = '/welcome';
-  static const String landing   = '/';
-  static const String auth      = '/auth';
-  static const String dashboard = '/dashboard';
-  static const String settings  = '/settings';
-  static const String landlords = '/landlords';
-  static const String tenants   = '/tenants';
+  static const String splash      = '/splash';
+  static const String welcome     = '/welcome';
+  static const String landing     = '/';
+  static const String auth        = '/auth';
+  static const String dashboard   = '/dashboard';
+  static const String settings    = '/settings';
+  static const String landlords   = '/landlords';
+  static const String tenants     = '/tenants';
   static const String contractors = '/contractors';
-  static const String agents    = '/agents';
-  static const String pricing   = '/pricing';
-  static const String inspect   = '/inspect/:token';
+  static const String agents      = '/agents';
+  static const String pricing     = '/pricing';
+  static const String inspect     = '/inspect/:token';
+  static const String ddComplete  = '/dd-complete';
+  static const String ddCancel    = '/dd-cancel';
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +109,8 @@ GoRouter appRouter(Ref ref) {
         AppRoutes.contractors,
         AppRoutes.agents,
         AppRoutes.pricing,
+        AppRoutes.ddComplete,
+        AppRoutes.ddCancel,
       };
       final isPublic = publicRoutes.contains(loc) || loc.startsWith('/inspect/');
 
@@ -184,6 +189,26 @@ GoRouter appRouter(Ref ref) {
         pageBuilder: (context, state) {
           final token = state.pathParameters['token'] ?? '';
           return _noTransitionPage(InspectScreen(token: token));
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.ddComplete,
+        pageBuilder: (context, state) {
+          final tenancyId = state.uri.queryParameters['tenancy'];
+          return _fadePage(
+            state.pageKey,
+            DdRedirectScreen(success: true, tenancyId: tenancyId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.ddCancel,
+        pageBuilder: (context, state) {
+          final tenancyId = state.uri.queryParameters['tenancy'];
+          return _fadePage(
+            state.pageKey,
+            DdRedirectScreen(success: false, tenancyId: tenancyId),
+          );
         },
       ),
     ],
