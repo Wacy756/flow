@@ -147,6 +147,7 @@ class _ComplianceTabState extends State<_ComplianceTab> {
   late TextEditingController _depositRefCtrl;
   late TextEditingController _prsRefCtrl;
   late String _depositScheme;
+  DateTime? _reviewDate;
   bool _saving = false;
   bool _registeringTds = false;
 
@@ -159,6 +160,7 @@ class _ComplianceTabState extends State<_ComplianceTab> {
     _prsRefCtrl     = TextEditingController(text: widget.tenancy.prsRegistrationRef ?? '');
     _depositScheme  = widget.tenancy.depositScheme ?? 'DPS';
     if (!_schemes.contains(_depositScheme)) _depositScheme = 'DPS';
+    _reviewDate     = widget.tenancy.tenancyReviewDate;
   }
 
   @override void dispose() { _depositRefCtrl.dispose(); _prsRefCtrl.dispose(); super.dispose(); }
@@ -247,6 +249,52 @@ class _ComplianceTabState extends State<_ComplianceTab> {
           _TextField(ctrl: _prsRefCtrl, hint: 'e.g. PRS-2025-XXXXXX', p: p),
         ])),
 
+        const SizedBox(height: 20),
+
+        // Soft review date
+        _SectionTitle('Tenancy Review Date', p),
+        const SizedBox(height: 4),
+        Text('A soft reminder — not a legal term. Helps you decide whether to have a conversation about the tenancy.',
+          style: TextStyle(color: p.muted, fontSize: 12, height: 1.4)),
+        const SizedBox(height: 10),
+        _InfoCard(p: p, child: GestureDetector(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: _reviewDate ?? DateTime.now().add(const Duration(days: 365)),
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+            );
+            if (picked != null) setState(() => _reviewDate = picked);
+          },
+          child: Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: p.teal.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.event_note_rounded, size: 18, color: p.teal)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Review date', style: TextStyle(color: p.sub, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(
+                _reviewDate != null
+                    ? DateFormat('d MMM yyyy').format(_reviewDate!)
+                    : 'Tap to set a date',
+                style: TextStyle(
+                  color: _reviewDate != null ? p.text : p.muted,
+                  fontSize: 14, fontWeight: FontWeight.w500)),
+            ])),
+            if (_reviewDate != null)
+              GestureDetector(
+                onTap: () => setState(() => _reviewDate = null),
+                child: Icon(Icons.clear_rounded, size: 18, color: p.muted)),
+            if (_reviewDate == null)
+              Icon(Icons.chevron_right_rounded, size: 18, color: p.muted),
+          ]),
+        )),
+
         const SizedBox(height: 24),
 
         // Save
@@ -276,6 +324,9 @@ class _ComplianceTabState extends State<_ComplianceTab> {
         'deposit_scheme': _depositScheme,
         if (_depositRefCtrl.text.trim().isNotEmpty) 'deposit_ref': _depositRefCtrl.text.trim(),
         if (_prsRefCtrl.text.trim().isNotEmpty) 'prs_registration_ref': _prsRefCtrl.text.trim(),
+        'tenancy_review_date': _reviewDate != null
+            ? '${_reviewDate!.year}-${_reviewDate!.month.toString().padLeft(2, '0')}-${_reviewDate!.day.toString().padLeft(2, '0')}'
+            : null,
       }).eq('id', widget.tenancy.id);
 
       widget.ref.invalidate(landlordTenanciesProvider);

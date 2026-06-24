@@ -3747,3 +3747,19 @@ class OpenCustomerPortal extends _$OpenCustomerPortal {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Tenancies approaching soft review date (within 60 days, in the future)
+// ---------------------------------------------------------------------------
+
+final tenanciesApproachingReviewProvider = Provider.autoDispose<List<Tenancy>>((ref) {
+  final tenancies = ref.watch(landlordTenanciesProvider).valueOrNull ?? [];
+  final now = DateTime.now();
+  return tenancies
+      .where((t) =>
+          t.tenancyReviewDate != null &&
+          t.tenancyReviewDate!.isAfter(now) &&
+          t.tenancyReviewDate!.difference(now).inDays <= 60)
+      .toList()
+    ..sort((a, b) => a.tenancyReviewDate!.compareTo(b.tenancyReviewDate!));
+});

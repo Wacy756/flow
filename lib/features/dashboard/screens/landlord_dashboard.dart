@@ -34,6 +34,7 @@ import '../widgets/pet_request_response_sheet.dart';
 import '../widgets/rate_job_sheet.dart';
 import '../widgets/section13_notice_sheet.dart';
 import '../widgets/settings_sheet.dart';
+import '../widgets/rent_ledger_sheet.dart';
 import '../widgets/tenancy_card.dart';
 import '../widgets/tenancy_details_sheet.dart';
 import 'check_in_report_screen.dart';
@@ -430,6 +431,8 @@ class _OverviewContent extends ConsumerWidget {
     final incidentsAsync   = ref.watch(landlordIncidentsProvider);
     final complianceAsync  = ref.watch(complianceSummaryProvider);
     final petRequestsAsync = ref.watch(landlordPetRequestsProvider);
+    final noScheduleAsync  = ref.watch(tenanciesWithoutScheduleProvider);
+    final reviewDue        = ref.watch(tenanciesApproachingReviewProvider);
 
     final tenancies     = tenanciesAsync.valueOrNull ?? [];
     final propCount     = propertiesAsync.valueOrNull?.length ?? tenancies.length;
@@ -449,10 +452,20 @@ class _OverviewContent extends ConsumerWidget {
         t.nextRentReviewDate!.difference(DateTime.now()).inDays <= 60 &&
         t.nextRentReviewDate!.isAfter(DateTime.now())).toList();
 
-    final hasActions = pendingPets.isNotEmpty || s13Due.isNotEmpty;
+    // On mobile, show rent setup nudges in overview (desktop uses Action Center)
+    final noScheduleIds = noScheduleAsync.valueOrNull ?? [];
+    final tenanciesNeedingSetup = !isDesktop
+        ? noScheduleIds
+            .map((id) => tenancies.where((t) => t.id == id || t.tenancyId == id).firstOrNull)
+            .whereType<Tenancy>()
+            .toList()
+        : <Tenancy>[];
+
+    final hasActions = pendingPets.isNotEmpty || s13Due.isNotEmpty || tenanciesNeedingSetup.isNotEmpty || reviewDue.isNotEmpty;
 
     List<Widget> buildActionItems() {
       if (!hasActions) return [];
+      final totalCount = pendingPets.length + s13Due.length + tenanciesNeedingSetup.length + reviewDue.length;
       return [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -466,11 +479,43 @@ class _OverviewContent extends ConsumerWidget {
                 color: p.red.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
               child: Text(
-                '${pendingPets.length + s13Due.length}',
+                '$totalCount',
                 style: TextStyle(color: p.red, fontSize: 11, fontWeight: FontWeight.w700))),
           ]),
         ),
         const SizedBox(height: 10),
+        // Rent setup nudges
+        ...tenanciesNeedingSetup.take(3).map((t) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: GestureDetector(
+            onTap: () => showRentLedgerSheet(context, tenancy: t),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: p.amber.withValues(alpha: 0.35)),
+                boxShadow: p.cardShadow),
+              child: Row(children: [
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: p.amber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.calendar_month_outlined, size: 18, color: p.amber)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Set up rent tracking',
+                    style: TextStyle(color: p.text, fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(t.shortAddress,
+                    style: TextStyle(color: p.muted, fontSize: 11),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                ])),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF94A3B8)),
+              ]),
+            ),
+          ),
+        )),
         ...pendingPets.take(3).map((req) {
           final tenancy = tenancies.firstWhere(
             (t) => t.id == req.tenancyId || t.tenancyId == req.tenancyId,
@@ -551,6 +596,42 @@ class _OverviewContent extends ConsumerWidget {
                     Text('${days}d', style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text('Serve S.13', style: TextStyle(color: p.muted, fontSize: 10)),
+                  ]),
+                ]),
+              ),
+            ),
+          );
+        }),
+        ...reviewDue.take(2).map((t) {
+          final days = t.tenancyReviewDate!.difference(DateTime.now()).inDays;
+          final color = days <= 14 ? p.orange : p.teal;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: GestureDetector(
+              onTap: () => showTenancyDetailsSheet(context, tenancy: t),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: p.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                  boxShadow: p.cardShadow),
+                child: Row(children: [
+                  Container(width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10)),
+                    child: Icon(Icons.event_note_rounded, size: 18, color: color)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Tenancy review approaching', style: TextStyle(color: p.text, fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(t.shortAddress, style: TextStyle(color: p.muted, fontSize: 11),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ])),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text('${days}d', style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text('Soft reminder', style: TextStyle(color: p.muted, fontSize: 10)),
                   ]),
                 ]),
               ),
@@ -2320,10 +2401,12 @@ class _ActionCenterSidebar extends ConsumerWidget {
     final now = DateTime.now();
     final fmt = NumberFormat.currency(symbol: '£', decimalDigits: 0);
 
-    final certsAsync     = ref.watch(landlordComplianceCertsProvider);
-    final incidentsAsync = ref.watch(landlordIncidentsProvider);
-    final paymentsAsync  = ref.watch(landlordAllRentPaymentsProvider);
-    final unread         = ref.watch(unreadNotificationCountProvider);
+    final certsAsync        = ref.watch(landlordComplianceCertsProvider);
+    final incidentsAsync    = ref.watch(landlordIncidentsProvider);
+    final paymentsAsync     = ref.watch(landlordAllRentPaymentsProvider);
+    final tenanciesAsync    = ref.watch(landlordTenanciesProvider);
+    final noScheduleAsync   = ref.watch(tenanciesWithoutScheduleProvider);
+    final unread            = ref.watch(unreadNotificationCountProvider);
 
     // Overdue rent payments (past due date, not paid)
     final overduePayments = (paymentsAsync.valueOrNull ?? [])
@@ -2343,14 +2426,30 @@ class _ActionCenterSidebar extends ConsumerWidget {
         .toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
+    // Active tenancies with rent configured but no schedule generated
+    final noScheduleIds = noScheduleAsync.valueOrNull ?? [];
+    final allTenancies = tenanciesAsync.valueOrNull ?? [];
+    final tenanciesNeedingSetup = noScheduleIds
+        .map((id) => allTenancies.where((t) => t.id == id || t.tenancyId == id).firstOrNull)
+        .whereType<Tenancy>()
+        .toList();
+
     final allClear = overduePayments.isEmpty &&
         expiringCerts.isEmpty &&
         staleIncidents.isEmpty &&
+        tenanciesNeedingSetup.isEmpty &&
         unread == 0;
 
     final isLoading = paymentsAsync.isLoading ||
         certsAsync.isLoading ||
-        incidentsAsync.isLoading;
+        incidentsAsync.isLoading ||
+        noScheduleAsync.isLoading;
+
+    final badgeCount = overduePayments.length +
+        expiringCerts.length +
+        staleIncidents.length +
+        tenanciesNeedingSetup.length +
+        (unread > 0 ? 1 : 0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2379,7 +2478,7 @@ class _ActionCenterSidebar extends ConsumerWidget {
                   border: Border.all(color: p.red.withValues(alpha: 0.25)),
                 ),
                 child: Text(
-                  '${overduePayments.length + expiringCerts.length + staleIncidents.length + (unread > 0 ? 1 : 0)}',
+                  '$badgeCount',
                   style: TextStyle(color: p.red, fontSize: 11, fontWeight: FontWeight.w700)),
               ),
           ]),
@@ -2396,6 +2495,12 @@ class _ActionCenterSidebar extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (tenanciesNeedingSetup.isNotEmpty) ...[
+                            _AcSectionHeader(label: 'Rent Setup', color: p.amber, p: p),
+                            ...tenanciesNeedingSetup.take(5).map((t) =>
+                              _AcRentSetupTile(tenancy: t, p: p,
+                                onTap: () => showRentLedgerSheet(context, tenancy: t))),
+                          ],
                           if (overduePayments.isNotEmpty) ...[
                             _AcSectionHeader(label: 'Overdue Rent', color: p.red, p: p),
                             ...overduePayments.take(5).map((payment) =>
@@ -2448,6 +2553,49 @@ class _AcSectionHeader extends StatelessWidget {
             fontWeight: FontWeight.w700, letterSpacing: 0.6)),
     ]),
   );
+}
+
+// ── Rent setup tile ────────────────────────────────────────────────────────────
+class _AcRentSetupTile extends StatelessWidget {
+  final Tenancy tenancy;
+  final AbodePalette p;
+  final VoidCallback onTap;
+  const _AcRentSetupTile({required this.tenancy, required this.p, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: p.amber.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: p.amber.withValues(alpha: 0.25)),
+        ),
+        child: Row(children: [
+          Container(
+            width: 30, height: 30,
+            decoration: BoxDecoration(
+              color: p.amber.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(Icons.calendar_month_outlined, size: 15, color: p.amber),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Generate rent schedule',
+              style: TextStyle(color: p.text, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(tenancy.shortAddress,
+              style: TextStyle(color: p.muted, fontSize: 10),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          ])),
+          Icon(Icons.chevron_right_rounded, size: 14, color: p.muted),
+        ]),
+      ),
+    );
+  }
 }
 
 // ── Overdue rent tile ──────────────────────────────────────────────────────────
