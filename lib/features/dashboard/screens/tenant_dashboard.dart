@@ -2693,6 +2693,13 @@ class _DocumentsContent extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(tenantTenanciesProvider),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionHeader(context, 'My Documents'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: Text(
+            'Compliance and tenancy documents shared by your landlord. Tap any document to view or download.',
+            style: TextStyle(color: p.muted, fontSize: 12, height: 1.4),
+          ),
+        ),
         Expanded(
           child: tenanciesAsync.when(
             loading: () => const Center(
@@ -2704,7 +2711,8 @@ class _DocumentsContent extends ConsumerWidget {
               final active =
                   list.where((t) => t.status == 'active').toList();
               if (active.isEmpty) {
-                return _emptyState(context, 'No active tenancy.',
+                return _emptyState(context,
+                    'No active tenancy.\nYour documents will appear here once you have an active tenancy.',
                     icon: Icons.folder_outlined);
               }
               return ListView.separated(

@@ -31,6 +31,9 @@ class AdminDashboard extends ConsumerWidget {
             onRefresh: () async {
               ref.invalidate(adminStatsProvider);
               ref.invalidate(adminOpenDisputesProvider);
+              ref.invalidate(adminAllContractorsProvider);
+              ref.invalidate(adminContractorInvitesProvider);
+              ref.invalidate(adminAllUsersProvider);
             },
             child: ListView(
               padding: EdgeInsets.zero,
